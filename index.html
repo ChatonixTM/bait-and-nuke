@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v35-2026-07-14">
+<meta name="app-version" content="v36-2026-07-16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -5341,8 +5341,11 @@ const LEAGUES = ['Great League', 'Ultra League', 'Master League'];
 // - Kanto Cup, Electric Cup, Catch Cup: mentioned in recent season recaps, but no
 //   verified type-restriction details found — left out rather than guessed.
 const CUPS = [
+  { name: 'Retro Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
+    window: 'Jul 14 – Jul 21, 2026', emoji: '🕹️', live: true },
   { name: 'Fantasy Cup: Ultra League Edition', league: 'Ultra League', cpCap: 2500,
-    types: ['dragon','steel','fairy'], window: 'Jul 7 – Jul 14, 2026', emoji: '🐉', live: true },
+    types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
   { name: 'Sunshine Cup: Great League Edition', league: 'Great League', cpCap: 1500,
@@ -5350,10 +5353,7 @@ const CUPS = [
   { name: 'Summer Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['normal','fire','water','grass','electric','bug'], window: 'recent rotation', emoji: '🍉' },
   { name: 'Scroll Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['water','fighting','dark'], window: 'recent rotation', emoji: '📜' },
-  { name: 'Retro Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
-    window: 'recent rotation', emoji: '🕹️' }
+    types: ['water','fighting','dark'], window: 'recent rotation', emoji: '📜' }
 ];
 let selectedCupIndex = 0;
 
