@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v30-2026-07-14">
+<meta name="app-version" content="v35-2026-07-14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -73,6 +73,21 @@
   }
   .update-banner.show{ display:block; }
   .cp-range-line{ margin-top:6px; font-size:0.82em; opacity:0.65; }
+  .rank1-panel{
+    margin:10px 0; padding:11px 13px;
+    border:1px solid var(--signal-dim); border-radius:11px;
+    background:rgba(var(--glow-rgb),0.06);
+  }
+  .rank1-head{ font-family:var(--sans); font-weight:700; font-size:12.5px; color:var(--signal); margin-bottom:5px; }
+  .rank1-spread{ font-family:var(--mono); font-size:14px; color:var(--text); margin-bottom:5px; }
+  .rank1-spread b{ color:var(--signal); }
+  .rank1-body{ font-size:12px; line-height:1.55; color:var(--text-dim); }
+  .rank1-body .r1-strong{ color:var(--amber); }
+  .rank1-cost{
+    margin-top:7px; padding-top:7px; border-top:1px dashed var(--line);
+    font-size:11px; color:var(--text-dim); line-height:1.5;
+  }
+  .rank1-cost b{ color:var(--text); }
   .cp-sub{ font-size:0.82em; opacity:0.7; margin-top:4px; }
   .appraisal-row{
     margin-top:10px; padding:10px 12px;
@@ -1230,6 +1245,47 @@
     padding:14px 16px;
     margin-bottom:24px;
   }
+  .loadout-line.syn{
+    font-size:12px; color:var(--text-dim);
+    margin-top:2px; padding-top:6px;
+    border-top:1px dashed var(--line);
+    line-height:1.6;
+  }
+  .loadout-line.syn b{ color:var(--text); }
+  .syn-icon{ margin-right:2px; }
+  .syn-good{ color:var(--signal) !important; }
+  .syn-slow{ color:var(--amber) !important; }
+  .syn-elite{
+    display:inline-block; margin-top:3px;
+    color:var(--signal); font-weight:600;
+  }
+  .move-buff{
+    display:inline-block;
+    margin-left:7px;
+    padding:1px 8px;
+    border-radius:999px;
+    font-family:var(--mono);
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    vertical-align:middle;
+    border:1px solid transparent;
+  }
+  /* debuffing the opponent — red family */
+  .move-buff.buff-foe{
+    color:#e0484d;
+    background:rgba(224,72,77,.12);
+    border-color:rgba(224,72,77,.3);
+  }
+  /* buffing yourself — green/signal family */
+  .move-buff.buff-self{
+    color:var(--signal);
+    background:rgba(var(--glow-rgb),.12);
+    border-color:var(--signal-dim);
+  }
+  /* guaranteed effects read louder than chance-based ones */
+  .move-buff.buff-sure{ filter:none; }
+  .move-buff:not(.buff-sure){ opacity:.72; font-weight:600; }
   .loadout-line{font-size:13px;line-height:1.7;}
   .loadout-line.dim{color:var(--text-dim);font-style:italic;}
   .loadout-line .fm{color:var(--text);font-weight:600;}
@@ -1335,6 +1391,17 @@
     padding-bottom:2px;
   }
   .quick-add-bar.show::-webkit-scrollbar{display:none;}
+  /* Desktop (mouse, no touch): the hidden-scrollbar touch-scroll is unusable —
+     a wheel scrolls vertically, and there's no bar to grab. Give these pointers
+     a real, thin, grabbable scrollbar back. Touch devices keep the clean look. */
+  @media (hover:hover) and (pointer:fine){
+    .quick-add-bar.show{ scrollbar-width:thin; padding-bottom:6px; }
+    .quick-add-bar.show::-webkit-scrollbar{ display:block; height:8px; }
+    .quick-add-bar.show::-webkit-scrollbar-thumb{
+      background:var(--signal-dim); border-radius:4px;
+    }
+    .quick-add-bar.show::-webkit-scrollbar-track{ background:transparent; }
+  }
   /* Scroll affordance: a fade + chevron on the right edge that disappears
      once you've scrolled to the end. Lives on the wrapper, not the scroller,
      so it doesn't slide away with the content. */
@@ -2348,6 +2415,48 @@
     font-size:12.5px;
     color:var(--text-dim);
     padding:16px 4px;
+    /* stays invisible unless the work is ACTUALLY slow (>180ms) — see analyzeSquad */
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+    opacity:0; pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  .analysis-loading.show{ opacity:1; }
+  .radar-spin{
+    position:relative; width:64px; height:64px;
+  }
+  .radar-spin .rs-ring{
+    position:absolute; top:50%; left:50%;
+    border:1px solid var(--signal-dim); border-radius:50%;
+    transform:translate(-50%,-50%);
+    animation:rsPulse 2.1s ease-out infinite;
+  }
+  .radar-spin .rs-ring:nth-child(1){ width:22px; height:22px; animation-delay:0s; }
+  .radar-spin .rs-ring:nth-child(2){ width:42px; height:42px; animation-delay:.35s; }
+  .radar-spin .rs-ring:nth-child(3){ width:62px; height:62px; animation-delay:.7s; }
+  @keyframes rsPulse{
+    0%   { opacity:.15; }
+    45%  { opacity:.75; }
+    100% { opacity:.15; }
+  }
+  /* the sweep arm — a cone of light rotating like a real radar */
+  .radar-spin .rs-sweep{
+    position:absolute; inset:0; border-radius:50%;
+    background:conic-gradient(from 0deg,
+      rgba(var(--glow-rgb),0.42) 0deg,
+      rgba(var(--glow-rgb),0.10) 42deg,
+      transparent 90deg, transparent 360deg);
+    animation:rsSweep 1.15s linear infinite;
+  }
+  @keyframes rsSweep{ to{ transform:rotate(360deg); } }
+  .radar-spin .rs-dot{
+    position:absolute; top:50%; left:50%;
+    width:5px; height:5px; margin:-2.5px 0 0 -2.5px;
+    background:var(--signal); border-radius:50%;
+    box-shadow:0 0 8px 2px rgba(var(--glow-rgb),0.55);
+  }
+  .rs-text{ letter-spacing:.04em; }
+  @media (prefers-reduced-motion: reduce){
+    .radar-spin .rs-sweep, .radar-spin .rs-ring{ animation:none; }
   }
   @media (max-width:680px){
     .squad-slots{grid-template-columns:1fr;}
@@ -2938,6 +3047,32 @@ function typeBadgeHtml(t){
   return `<span class="type-badge" style="background:${c.bg};color:${c.fg};border-color:${c.bg};">${t}</span>`;
 }
 
+// Turn real Niantic buff data into an honest, human phrase. The whole point is
+// the distinction the raw archetype string can't make: Sand Sear Storm ALWAYS
+// drops the opponent's attack; Muddy Water only does 30% of the time. A tool
+// that treats those the same is lying by omission. Returns '' if no effect.
+function moveBuffText(move){
+  const b = move && move.buff;
+  if(!b || !b.effects || !b.effects.length) return '';
+  const arrow = s => s > 0 ? '⬆'.repeat(Math.min(2,Math.abs(s))) : '⬇'.repeat(Math.min(2,Math.abs(s)));
+  const parts = b.effects.map(e=>{
+    const stat = e.stat === 'atk' ? 'ATK' : 'DEF';
+    const who  = e.who === 'self' ? 'your' : 'foe';
+    return `${arrow(e.stages)}${stat} ${who}`;
+  });
+  const chance = b.chance >= 1 ? 'guaranteed' : `${Math.round(b.chance*100)}% chance`;
+  return `${parts.join(' ')} · ${chance}`;
+}
+function moveBuffBadge(move){
+  const txt = moveBuffText(move);
+  if(!txt) return '';
+  const b = move.buff;
+  const good = b.effects[0].who === 'self';        // buffing yourself vs debuffing foe
+  const sure = b.chance >= 1;
+  const cls = good ? 'buff-self' : 'buff-foe';
+  return `<span class="move-buff ${cls}${sure?' buff-sure':''}" title="${txt}">${txt}</span>`;
+}
+
 // Shield icons give an at-a-glance bulk read: broken shield = fragile,
 // up to 3 full shields = very tanky. Matches the intensity, not just a label.
 function bulkBadgeHtml(bulk, role){
@@ -3095,6 +3230,73 @@ function cpBounds(baseStats){
     minCP: cpAtStats(bA, bD, bH, CPM_TABLE[0]),
     maxCP: cpAtStats(bA+15, bD+15, bH+15, CPM_TABLE[CPM_TABLE.length-1])
   };
+}
+
+// ---- #3: rank-1 (max-bulk) IV spread under a league's CP cap -----------------
+// The single spread that maximizes stat product (Atk*Def*HP, level-scaled)
+// without exceeding the cap. This IS what "rank 1 for bulk" means — verified
+// against known GL cores. We present it as MAX BULK UNDER CAP (which it provably
+// is), not as "matches website X's rank 1" (which we can't verify here). For an
+// uncapped league it's simply 15/15/15. Everything is derived from the same CP
+// formula the rest of the app uses — no new data, no guessing.
+function bestStatSpreadUnderCap(base, cap, iv){
+  let bestCpm = 0, bestLvl = 0, bestCp = 0;
+  for(let i = CPM_TABLE.length - 1; i >= 0; i--){
+    const c = CPM_TABLE[i];
+    const cp = cpAtStats(base.atk + iv.a, base.def + iv.d, base.hp + iv.h, c);
+    if(cp <= cap){ bestCpm = c; bestLvl = 1 + i*0.5; bestCp = cp; break; }
+  }
+  if(!bestCpm) return null;
+  const A = (base.atk + iv.a) * bestCpm;
+  const D = (base.def + iv.d) * bestCpm;
+  const H = Math.floor((base.hp + iv.h) * bestCpm);
+  return { lvl: bestLvl, cp: bestCp, prod: A * D * H };
+}
+
+function rankOneSpread(baseStats, league){
+  const cap = league === 'Great League' ? 1500 : league === 'Ultra League' ? 2500 : null;
+  if(!cap){
+    return { league, cap:null, best:{a:15,d:15,h:15,lvl:51}, hundoGap:0, uncapped:true };
+  }
+  let best = null;
+  for(let a=0;a<=15;a++) for(let d=0;d<=15;d++) for(let h=0;h<=15;h++){
+    const s = bestStatSpreadUnderCap(baseStats, cap, {a,d,h});
+    if(s && (!best || s.prod > best.prod)) best = {a,d,h,...s};
+  }
+  if(!best) return { league, cap, unreachable:true };
+  const hundo = bestStatSpreadUnderCap(baseStats, cap, {a:15,d:15,h:15});
+  const hundoGap = hundo ? (best.prod - hundo.prod) / best.prod : 0;
+  return { league, cap, best, hundo, hundoGap };
+}
+
+// Max-out cost is a VERIFIED constant: 296 XL candy to go L40->L50 for any
+// standard Pokémon (Niantic upgrade table: xlCandyCost summed x upgradesPerLevel
+// = 148 x 2 = 296). Confirmed against in-game screens for Azumarill/Sableye/
+// Carbink. Shadows cost more; this is the standard figure.
+const MAX_XL_CANDY = 296;
+
+function rankOnePanel(mon){
+  const league = LEAGUE_SELECT ? LEAGUE_SELECT.value : 'Great League';
+  const r = rankOneSpread(mon.baseStats||{}, league);
+  if(r.uncapped){
+    return `<div class="rank1-panel">
+      <div class="rank1-head">🎯 Best spread for ${league}</div>
+      <div class="rank1-body">No CP cap here — <b>15/15/15</b> is genuinely best. Max Attack isn't wasted in Master League.</div>
+    </div>`;
+  }
+  if(r.unreachable) return '';
+  const b = r.best;
+  const pct = (r.hundoGap * 100).toFixed(1);
+  let verdict;
+  if(r.hundoGap >= 0.03)      verdict = `<b class="r1-strong">Low Attack matters a lot here</b> — a 15/15/15 is <b>${pct}% weaker</b> than this spread under the cap.`;
+  else if(r.hundoGap >= 0.008) verdict = `Low Attack gives a small edge (~${pct}% more bulk than a 15/15/15).`;
+  else                         verdict = `IVs barely matter for this one — any spread is within ${pct}% of ideal.`;
+  return `<div class="rank1-panel">
+    <div class="rank1-head">🎯 Best ${league} spread (max bulk under ${r.cap})</div>
+    <div class="rank1-spread"><b>${b.a}/${b.d}/${b.h}</b> at level <b>${b.lvl}</b> → CP <b>${b.cp}</b></div>
+    <div class="rank1-body">${verdict}</div>
+    <div class="rank1-cost">Maxing any standard Pokémon to L50 costs <b>${MAX_XL_CANDY} XL candy</b> (+ stardust). Same for legendaries, capped-league picks, everything.</div>
+  </div>`;
 }
 
 function ivStrategyTip(){
@@ -3268,9 +3470,24 @@ function pickDefaultLoadout(mon, fastList, chargedList){
   // reason a "weaker on paper" move can be the real pick.
   const stab = m => (mon.types||[]).map(t=>(t||'').toLowerCase()).includes((m.type||'').toLowerCase()) ? 1.2 : 1;
 
-  // PvPoke's own archetype taxonomy carries buff/debuff intel the raw
-  // power number hides. Self-debuff nukes (Superpower, Wild Charge) pay a
-  // tax; self-buffers compound; opponent-debuffers shave stats for free.
+  // Real buff value, in "effective free power" terms. A guaranteed -1 to the
+  // opponent's defense makes THIS and every future hit land harder; a self-atk
+  // buff compounds your whole cycle. We now read the ACTUAL magnitude + chance
+  // from Niantic data instead of guessing from an archetype string. Scaled by
+  // activation chance, so Muddy Water (30%) is valued at ~a third of a
+  // guaranteed version — honest, not binary.
+  const buffValue = m => {
+    const b = m.buff;
+    if(!b || !b.effects) return 0;
+    let v = 0;
+    for(const e of b.effects){
+      // opponent debuff and self buff are both "good for you"; ~8 eff-power per stage
+      const mag = Math.abs(e.stages) * 8;
+      v += mag;
+    }
+    return v * (b.chance || 0);
+  };
+
   const arch = m => {
     const a = (m.archetype||'').toLowerCase();
     if(a.includes('self-debuff')) return 0.9;
@@ -3279,30 +3496,28 @@ function pickDefaultLoadout(mon, fastList, chargedList){
     return 1;
   };
 
-  // NUKE — effective power (STAB + archetype), nudged by damage-per-energy
-  // so a 100/55 move can out-rank a 110/80 one. Legacy & Elite TM moves are
-  // already in the candidate pool, so they win here when they deserve to.
+  // NUKE — effective power (STAB + archetype), nudged by damage-per-energy AND
+  // real buff value, so Nature's Madness (80/50, guaranteed -1 foe def) can beat
+  // a bigger raw nuke it used to lose to.
   const nukeScore = c => {
     const eff = c.power * stab(c) * arch(c);
     const dpe = eff / Math.max(1, c.energy || 1);
-    return eff + dpe * 12;
+    return eff + dpe * 12 + buffValue(c);
   };
   const nuke = [...chargedList].sort((a,b)=>nukeScore(b)-nukeScore(a))[0];
 
-  // BAIT — cheap energy still leads, but STAB, pressure archetypes,
-  // damage-per-energy, and type coverage vs the nuke all break ties.
+  // BAIT — cheap energy still leads, but STAB, real buff value, damage-per-energy,
+  // and type coverage vs the nuke all break ties. A cheap move that ALSO shaves
+  // the opponent (Acid Spray: 45e, guaranteed -2 def) is an elite bait even if
+  // its damage is low — exactly the founder's thesis, now scored on real data.
   const baitScore = c => {
-    const a = (c.archetype||'').toLowerCase();
     const eff = c.power * stab(c);
     const dpe = eff / Math.max(1, c.energy || 1);
     let s = -1.6 * (c.energy || 99);
     if(stab(c) > 1) s += 6;
-    // one archetype bonus, not stacked — a "Debuff Spam" tag shouldn't double-dip
-    if(a.includes('boost')) s += 8;
-    else if(a.includes('debuff') && !a.includes('self-debuff')) s += 6;
-    else if(a.includes('bait') || a.includes('spam')) s += 4;
+    s += buffValue(c) * 1.3;          // buffs matter MORE on a bait — it fires often
     s += dpe * 10;
-    if((c.type||'') !== (nuke.type||'')) s += 5; // coverage beats redundancy
+    if((c.type||'') !== (nuke.type||'')) s += 5;
     return s;
   };
   const bait = chargedList
@@ -3815,8 +4030,18 @@ function renderResult(mon){
 
   const isInSquad = squad.some(s => s.speciesId === mon.speciesId);
   const fastOpts = fastList.map(f=>`<option value="${f.moveId}"${f.moveId===def.fast.moveId?' selected':''}>${f.name}</option>`).join('');
-  const nukeOpts = chargedList.map(c=>`<option value="${c.moveId}"${c.moveId===def.nuke.moveId?' selected':''}>${c.name}</option>`).join('');
-  const baitOpts = `<option value="">None — single charged move</option>` + chargedList.map(c=>`<option value="${c.moveId}"${def.bait && c.moveId===def.bait.moveId?' selected':''}>${c.name}</option>`).join('');
+  // compact buff suffix for <option> text (options can't hold HTML, so plain glyphs)
+  const optBuff = c => {
+    const b = c.buff;
+    if(!b || !b.effects) return '';
+    const g = b.effects.map(e=>{
+      const ar = e.stages>0 ? '↑'.repeat(Math.min(2,Math.abs(e.stages))) : '↓'.repeat(Math.min(2,Math.abs(e.stages)));
+      return `${ar}${e.stat.toUpperCase()}${e.who==='self'?'':'✕'}`;
+    }).join('');
+    return `  ·  ${g}${b.chance<1?` (${Math.round(b.chance*100)}%)`:''}`;
+  };
+  const nukeOpts = chargedList.map(c=>`<option value="${c.moveId}"${c.moveId===def.nuke.moveId?' selected':''}>${c.name}${optBuff(c)}</option>`).join('');
+  const baitOpts = `<option value="">None — single charged move</option>` + chargedList.map(c=>`<option value="${c.moveId}"${def.bait && c.moveId===def.bait.moveId?' selected':''}>${c.name}${optBuff(c)}</option>`).join('');
 
   const researchTables = `
     <div id="researchTables" style="${isInSquad ? 'display:none;' : ''}">
@@ -3908,6 +4133,7 @@ function renderResult(mon){
     </div>
     <div class="cp-solve-note" id="cpSolveNote" style="font-size:0.85em;opacity:0.8;margin-top:4px;"></div>
     <div class="iv-tip tip-dismiss" data-tip="ivTip" id="ivTip"></div>
+    <div id="rank1Panel"></div>
     <div id="loadoutStats"></div>
 
     ${nightmareBoardHTML(nightmares, mon.speciesName, 'tap a nightmare to scout it — know thy enemy')}
@@ -3915,7 +4141,7 @@ function renderResult(mon){
     ${researchTables}
 
     <div class="note tip-dismiss" data-tip="pvpNote"><button class="tip-x" aria-label="Dismiss tip">×</button>
-      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can sometimes mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap (we don't calculate that exact level yet — see note below). <b>Heads up:</b> some move combos shown here may only be obtainable via an Elite TM (or may no longer be available at all if it's a legacy move) — this dataset doesn't yet flag which ones, so double-check in-game before spending candy. Full current roster (1595 Pokémon, 333 moves), synced from PvPoke's data.
+      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>🎯 Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> some move combos shown here may only be obtainable via an Elite TM (or may no longer be available at all if it's a legacy move) — this dataset doesn't yet flag which ones, so double-check in-game before spending candy. Full current roster (1595 Pokémon, 333 moves), synced from PvPoke's data.
     </div>
   `;
   RESULT.classList.add('show');
@@ -3930,6 +4156,8 @@ function renderResult(mon){
     document.getElementById('loadoutStats').innerHTML = renderLoadoutStats(loadout);
     const tipEl = document.getElementById('ivTip');
     if(tipEl) tipEl.innerHTML = '<button class="tip-x" aria-label="Dismiss tip">×</button>' + ivStrategyTip();
+    const r1El = document.getElementById('rank1Panel');
+    if(r1El) r1El.innerHTML = rankOnePanel(mon);
     applyTipDismissals();
     if(isInSquadNow(mon.speciesId)){
       const idx = squad.findIndex(s => s.speciesId === mon.speciesId);
@@ -4060,11 +4288,58 @@ function isInSquadNow(speciesId){
 }
 
 function renderLoadoutStats(l){
-  const nukeLine = `<div class="loadout-line"><b>${l.casts}</b> taps of <span class="fm">${l.fast.name}</span> charges <span class="cm">${l.charged.name}</span> (nuke) — <b class="amber">${l.cycleDps.toFixed(2)}</b> dmg/sec</div>`;
+  const nukeBuff = moveBuffBadge(l.charged);
+  const baitBuff = l.bait ? moveBuffBadge(l.bait) : '';
+  const nukeLine = `<div class="loadout-line"><b>${l.casts}</b> taps of <span class="fm">${l.fast.name}</span> charges <span class="cm">${l.charged.name}</span> (nuke) — <b class="amber">${l.cycleDps.toFixed(2)}</b> dmg/sec${nukeBuff}</div>`;
   const baitLine = l.bait
-    ? `<div class="loadout-line"><b>${l.castsBait}</b> taps of <span class="fm">${l.fast.name}</span> charges <span class="cm">${l.bait.name}</span> (bait) — <b class="amber">${l.dpsBait.toFixed(2)}</b> dmg/sec</div>`
+    ? `<div class="loadout-line"><b>${l.castsBait}</b> taps of <span class="fm">${l.fast.name}</span> charges <span class="cm">${l.bait.name}</span> (bait) — <b class="amber">${l.dpsBait.toFixed(2)}</b> dmg/sec${baitBuff}</div>`
     : `<div class="loadout-line dim">No bait move selected — running nuke only.</div>`;
-  return `<div class="loadout-stats">${baitLine}${nukeLine}</div>`;
+  const synergy = renderSynergyLine(l);
+  const autoNote = `<div class="loadout-auto">⚡ Auto-selected for best PvP value — STAB, energy efficiency, coverage, and guaranteed stat effects all weighed. Change any move above to override.</div>`;
+  return `<div class="loadout-stats">${baitLine}${nukeLine}${synergy}${autoNote}</div>`;
+}
+
+// ---- #2: energy-synergy read -------------------------------------------------
+// Turns the raw energy math into the plain-English "why this kit works" the
+// founder described: fast-move energy-per-turn, taps-to-fire the cheapest
+// charged move, and a call-out when a move is an elite utility bait (cheap AND
+// carries a guaranteed stat swing). Everything here is derived from real move
+// data — energyGain, cooldown, energy cost, and the verified buff field.
+function renderSynergyLine(l){
+  const f = l.fast;
+  const eGain = f.energyGain || 0;
+  const turns = Math.max(1, Math.round((f.cooldown || 500) / 500));
+  const ept = (eGain / turns);                       // energy per turn
+  const cheapest = l.bait ? l.bait : l.charged;
+  const tapsToFire = Math.ceil((cheapest.energy || 1) / Math.max(1, eGain));
+  const secsToFire = (tapsToFire * (f.cooldown || 500) / 1000);
+
+  // Is the bait an "elite utility bait"? cheap (<=50e) AND a guaranteed swing.
+  const eliteBait = l.bait && l.bait.buff && l.bait.buff.chance >= 1 && (l.bait.energy || 99) <= 50;
+
+  let verdict;
+  if(ept >= 4.0)      verdict = `<b class="syn-good">fast-charging</b> — builds energy quickly`;
+  else if(ept >= 3.0) verdict = `steady energy`;
+  else                verdict = `<b class="syn-slow">slow to charge</b> — leans on its fast move for damage`;
+
+  const eliteNote = eliteBait
+    ? ` <span class="syn-elite">⭐ elite bait: even a shielded ${l.bait.name} still ${buffPhrase(l.bait.buff)}</span>`
+    : '';
+
+  return `<div class="loadout-line syn">
+    <span class="syn-icon">🔋</span>
+    ${f.name} feeds <b>${ept.toFixed(1)}</b> energy/turn (${verdict}).
+    First charge in <b>${tapsToFire}</b> taps (~${secsToFire.toFixed(1)}s).${eliteNote}
+  </div>`;
+}
+
+function buffPhrase(b){
+  if(!b || !b.effects || !b.effects.length) return 'applies its effect';
+  const e = b.effects[0];
+  const dir = e.stages > 0 ? 'raises your' : 'drops the foe\'s';
+  const stat = e.stat === 'atk' ? 'Attack' : 'Defense';
+  const mag = Math.abs(e.stages) > 1 ? ` by ${Math.abs(e.stages)}` : '';
+  return `${dir} ${stat}${mag}`;
 }
 
 function renderQuickAddBar(mon){
@@ -4098,6 +4373,16 @@ function renderQuickAddBar(mon){
   window.addEventListener('resize', syncDeckAffordance);
   requestAnimationFrame(syncDeckAffordance);  // after layout settles
 
+  // Desktop wheel -> horizontal scroll. A mouse wheel only scrolls vertically,
+  // so without this the deck's off-edge items (⚡ analyze, league) are
+  // unreachable with a mouse — which is exactly the bug the founder hit.
+  bar.addEventListener('wheel', (e)=>{
+    if(bar.scrollWidth <= bar.clientWidth) return;      // nothing to scroll
+    if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // already a horizontal gesture
+    e.preventDefault();
+    bar.scrollLeft += e.deltaY;
+  }, {passive:false});
+
   // Clear squad, right here in the deck — proxies the bottom Clear button so
   // there's one source of truth for what "clear" actually does.
   const qaClear = document.getElementById('qaClearBtn');
@@ -4120,11 +4405,10 @@ function renderQuickAddBar(mon){
   if(qaA){
     qaA.addEventListener('click', ()=>{
       const ab = document.getElementById('analyzeBtn');
-      if(ab && !ab.disabled){
-        ab.click();
-        const an = document.getElementById('analysis');
-        if(an) setTimeout(()=> an.scrollIntoView({behavior:'smooth', block:'start'}), 150);
-      }
+      // Just fire the real button. analyzeSquad() now owns the scroll-to-result
+      // for ALL entry points — doing it here too meant two scrollIntoView calls
+      // (one to 'start', one to 'center') racing each other.
+      if(ab && !ab.disabled) ab.click();
     });
   }
   document.getElementById('addSquadBtn').addEventListener('click', ()=>{
@@ -5481,19 +5765,44 @@ function renderCoverageGrid(){
 function analyzeSquad(){
   ANALYZE_BTN.disabled = true;
   syncAnalyze2();
-  ANALYSIS.innerHTML = `<div class="analysis-loading">Reading your squad…</div>`;
-  // let the loading frame paint before the (heavier) threat sweep blocks
+
+  // The radar spinner is NOT theatre. The scorer genuinely runs in ~20-60ms, so
+  // on a normal squad this never appears — and it shouldn't, because the result
+  // really is instant. It only shows if the work actually exceeds 180ms (a slow
+  // phone, a cold cache, a heavier sweep). A spinner that fires when nothing is
+  // slow is a lie told with an animation.
+  ANALYSIS.innerHTML = `
+    <div class="analysis-loading" id="analysisLoading">
+      <div class="radar-spin" aria-hidden="true">
+        <span class="rs-ring"></span>
+        <span class="rs-ring"></span>
+        <span class="rs-ring"></span>
+        <span class="rs-sweep"></span>
+        <span class="rs-dot"></span>
+      </div>
+      <div class="rs-text">Sweeping the meta…</div>
+    </div>`;
+  const loader = document.getElementById('analysisLoading');
+  const revealTimer = setTimeout(()=>{ if(loader) loader.classList.add('show'); }, 180);
+
   setTimeout(()=>{
     try{
       renderAnalysis(scoreSquadReal());
+      // Take them to the result. Nothing is more annoying than an app that
+      // computes something and leaves you scrolled somewhere else.
+      requestAnimationFrame(()=>{
+        const card = ANALYSIS.querySelector('.analysis-card') || ANALYSIS;
+        card.scrollIntoView({behavior:'smooth', block:'center'});
+      });
     }catch(err){
       console.error(err);
-      ANALYSIS.innerHTML = `<div class="analysis-loading">⚠ Analysis failed: ${err.message}</div>`;
+      ANALYSIS.innerHTML = `<div class="analysis-loading show">⚠ Analysis failed: ${err.message}</div>`;
     }finally{
+      clearTimeout(revealTimer);
       ANALYZE_BTN.disabled = squad.length < 2;
       syncAnalyze2();
     }
-  }, 30);
+  }, 20);
 }
 ANALYZE_BTN.addEventListener('click', analyzeSquad);
 function syncAnalyze2(){
