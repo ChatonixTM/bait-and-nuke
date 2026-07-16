@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v36-2026-07-16">
+<meta name="app-version" content="v37-2026-07-16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -2547,7 +2547,8 @@ try{
     <div class="hp-tip"><b>💀 Tier 1 — Hard Counters.</b> Type advantage <b>plus</b> real shield pressure: a cheap bait and fast energy. They force your shields early, then close. These are the ones that actually beat you.</div>
     <div class="hp-tip"><b>🪨 Tier 2 — Grinders.</b> They outlast you and convert it. <i>No type advantage needed</i> — a bulky wall that resists you and chips away is still a nightmare. Slow, and inevitable.</div>
     <div class="hp-tip"><b>🎲 Tier 3 — Coincidental.</b> Super-effective on paper, but no engine behind it. Beatable if you shield correctly.</div>
-    <div class="hp-tip"><b>Reading a card:</b> <b>⚡</b> shield pressure (1.00 = average; higher = forces shields faster) · <b>💥</b> damage per energy · <b>⏱</b> seconds to charge their cheapest move · and the kit they actually run.</div>
+    <div class="hp-tip"><b>Reading a card:</b> <b>⚡</b> shield pressure (1.00 = average; higher = forces shields faster) · <b>💥</b> damage per energy · <b>⏱</b> seconds to <i>fire</i> their cheapest move · <b>⏳</b> fast-move length in turns · and the kit they actually run.</div>
+    <div class="hp-tip"><b>⏳ Turn parity — "Abbie's rule."</b> The engine counts real 0.5s turns, not averages. A 1-turn move and a 4-turn move with the same energy rate are <i>not</i> the same weapon: short moves hit energy thresholds cleanly and react instantly; long moves overshoot, telegraph, and wait on move boundaries. Pressure scores respect that now.</div>
     <div class="hp-tip"><b>🗂 Tap any nightmare</b> to open it as a <b>stacked tab</b> over your work — your squad stays exactly where it is. <b>←</b> minimizes it (it's recoverable), <b>×</b> closes it. Both need a short press-and-hold, so you can't nuke a tab by accident. <kbd>Esc</kbd> always backs out.</div>
   </details>
 
@@ -2739,7 +2740,7 @@ try{
       <span class="pr-icon">🔒</span><span class="pr-label">Privacy</span><span class="pr-chev">›</span>
     </div>
     <div class="profile-section" id="profilePrivacySection">
-      <p class="privacy-text">Everything here runs in your browser. Your squad, saved teams, and tier selection are stored locally to your account on this tool — nothing is sold or shared. The one exception: tapping "Analyze squad synergy" sends your squad's species, types, and movesets to Claude to generate the write-up. No personal info leaves your device.</p>
+      <p class="privacy-text">Everything here runs in your browser. Your squad, saved teams, and tier selection are stored locally to your account on this tool — nothing is sold or shared. Squad analysis is computed entirely on your device too. Nothing leaves your device, ever.</p>
     </div>
 
   </div>
@@ -3532,8 +3533,16 @@ function pickDefaultLoadout(mon, fastList, chargedList){
       const s = cycleStats(f, c);
       const dmg = s.casts * f.power * stab(f) + c.power * stab(c) * arch(c);
       const dps = s.totalTimeS > 0 ? dmg / s.totalTimeS : 0;
-      const eps = (f.energyGain||0) / Math.max(0.5, (f.cooldown||500)/1000);
-      const score = dps + eps * 0.35;
+      // Turn-true effective charge speed vs THIS kit — not raw EPS, which can't
+      // tell a 1-turn move from a 4-turn one (Abbie's rule, v37). Changes 26 of
+      // 1,595 default kits, all close-margin; spot-checked winners include
+      // G-Slowbro Confusion→Poison Jab and Araquanid Infestation→Bug Bite,
+      // both of which match what top players actually run. Full diff list in
+      // handoff v12. (An earlier draft of this comment claimed zero changes —
+      // that came from a validation harness that silently skipped every mon.
+      // The harness bug is documented in the handoff; trust this line instead.)
+      const effEps = (c.energy||1) / turnTrueTTF(f, c.energy||1);
+      const score = dps + effEps * 0.35;
       if(score > bestScore){ bestScore = score; bestFast = f; }
     });
   });
@@ -3614,17 +3623,41 @@ function defMult(atkType, defTypes){
   defTypes.forEach(t=>{ if(row[t] !== undefined) m *= row[t]; });
   return m;
 }
-const PRESSURE_REF = 0.155;  // ~median charges/sec across the real roster
+// ---- TURN PARITY — "Abbie's rule" (v37) ------------------------------------
+// The old pressure math was CONTINUOUS: energy-per-second ÷ cheapest move. But
+// PvP runs on 0.5s turns, so a 1-turn Bug Bite and a 4-turn Splash — identical
+// EPS 6 — were rated as the same weapon. They are not, for two REAL reasons:
+//   1. QUANTIZATION — energy arrives in whole taps. A big slow move overshoots
+//      energy thresholds more often (Splash to 40e: 4 casts = 48e, 8 wasted).
+//   2. COMMITMENT — you can only act on a move boundary. After reaching energy,
+//      a T-turn move waits (T−1)/2 turns on average before it can fire. A
+//      5-turn Incinerate telegraphs and overcommits; a 1-turn move is nimble.
+// Both are modeled in turn-true TIME TO FIRE below. Credit: Abbie caught this
+// in one line — "a 1-turn and a 4-turn move with the same EPS aren't equal."
+function fastTurns(f){ return Math.max(1, Math.round((f.cooldown||500)/500)); }
+function turnTrueTTF(f, cost){
+  const gain = Math.max(1, f.energyGain||1);
+  const T = fastTurns(f);
+  return Math.ceil(cost/gain) * T * 0.5   // quantized taps, real seconds
+       + (T - 1) * 0.25;                  // expected move-boundary latency
+}
+// CHARGE_REF calibration: median turn-true charge rate (1/TTF) across all 741
+// eligible default loadouts, scaled so the MEDIAN mon keeps the same idx it had
+// under the old constant (1.229). This preserves the Tier-1 gate's strictness —
+// validated in-harness: 28 loadouts lost the gate / 29 gained it, every flip
+// turn-driven (Confusion/Incinerate users down, 1-turn users up). Recompute if
+// the dataset is ever re-extracted.
+const CHARGE_REF = 0.1302;
 function nmEps(fast){ return (fast.energyGain||0) / Math.max(0.5,(fast.cooldown||500)/1000); }
 function nmDpe(c, stabTypes){
   const s = stabTypes.includes((c.type||'').toLowerCase()) ? 1.2 : 1;
   return (c.power*s)/Math.max(1, c.energy||1);
 }
 function nmPressure(lo, chargedList){
-  const E = nmEps(lo.fast);
   const cheapest = Math.min(...chargedList.map(c=>c.energy||99));
-  return { idx: (E/Math.max(1,cheapest))/PRESSURE_REF, eps:E, cheapest,
-           ttc: cheapest/Math.max(0.1,E) };
+  const ttf = turnTrueTTF(lo.fast, cheapest);
+  return { idx: (1/ttf)/CHARGE_REF, eps: nmEps(lo.fast), cheapest,
+           turns: fastTurns(lo.fast), ttc: ttf };
 }
 
 function findNightmares(mon, limit){
@@ -3773,9 +3806,10 @@ function nightmareBoardHTML(nightmares, monName, hintText){
                 · your reply <b>${NM_MULT(n.myBest)}</b>
               </div>
               <div class="nm-stats">
-                <span title="Shield pressure — how fast they force a shield">⚡ ${n.pressure.idx.toFixed(2)}</span>
+                <span title="Shield pressure — how fast they force a shield (turn-true: respects tap quantization and move length)">⚡ ${n.pressure.idx.toFixed(2)}</span>
                 <span title="Damage per energy of their nuke">💥 ${n.dpe.toFixed(2)}</span>
-                <span title="Seconds to charge their cheapest move">⏱ ${n.pressure.ttc.toFixed(1)}s</span>
+                <span title="Turn-true seconds to FIRE their cheapest move — whole taps plus move-boundary latency">⏱ ${n.pressure.ttc.toFixed(1)}s</span>
+                <span title="Fast move length — shorter = nimbler: finer energy steps, faster reactions">⏳ ${n.pressure.turns}t</span>
               </div>
               <div class="nm-kit">${n.theirFast.name}${n.theirBait?` › ${n.theirBait.name}`:''} › ${n.theirNuke.name}</div>
             </button>`).join('')}
@@ -4326,9 +4360,15 @@ function renderSynergyLine(l){
     ? ` <span class="syn-elite">⭐ elite bait: even a shielded ${l.bait.name} still ${buffPhrase(l.bait.buff)}</span>`
     : '';
 
+  // Turn-parity read (Abbie's rule, v37): move length is its own axis, separate
+  // from energy rate. 1-turn = nimble (fine energy steps, instant reactions);
+  // 4-5 turn = commitment (overshoots thresholds, telegraphs, waits on boundaries).
+  const tempo = turns === 1 ? `<b class="syn-good">1-turn</b> move — nimble, reacts instantly`
+              : turns >= 4  ? `<b class="syn-slow">${turns}-turn</b> move — commits you; slower to pivot`
+              :               `${turns}-turn move`;
   return `<div class="loadout-line syn">
     <span class="syn-icon">🔋</span>
-    ${f.name} feeds <b>${ept.toFixed(1)}</b> energy/turn (${verdict}).
+    ${f.name} feeds <b>${ept.toFixed(1)}</b> energy/turn (${verdict}) · ${tempo}.
     First charge in <b>${tapsToFire}</b> taps (~${secsToFire.toFixed(1)}s).${eliteNote}
   </div>`;
 }
