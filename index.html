@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v42-2026-07-17">
+<meta name="app-version" content="v43-2026-07-17">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -2585,7 +2585,7 @@ try{
     <div class="hp-tip"><b>🪨 Tier 2 — Grinders.</b> They outlast you and convert it. <i>No type advantage needed</i> — a bulky wall that resists you and chips away is still a nightmare. Slow, and inevitable.</div>
     <div class="hp-tip"><b>🎲 Tier 3 — Coincidental.</b> Super-effective on paper, but no engine behind it. Beatable if you shield correctly.</div>
     <div class="hp-tip"><b>Reading a card:</b> <b>⚡</b> shield pressure (1.00 = average; higher = forces shields faster) · <b>💥</b> damage per energy · <b>⏱</b> real seconds to charge their cheapest move · and the kit they actually run, with the fast move's turn length <b>(1T–5T)</b>.</div>
-    <div class="hp-tip"><b>⏳ Turn parity — the Abbie rule.</b> Two fast moves with identical energy-per-second are <i>not</i> the same weapon. Energy only lands when a fast move <i>finishes</i>, and mid-move you can't act — so a 1-turn move is a scalpel, a 4-turn move is a commitment. Bug Bite and Splash both make 6 energy/sec; Bug Bite reaches a 40-energy move two full turns sooner. The engine now sees the difference. <i>(Named for the one who caught it.)</i></div>
+    <div class="hp-tip"><b>⏳ Turn parity — the Rouge rule.</b> Two fast moves with identical energy-per-second are <i>not</i> the same weapon. Energy only lands when a fast move <i>finishes</i>, and mid-move you can't act — so a 1-turn move is a scalpel, a 4-turn move is a commitment. Bug Bite and Splash both make 6 energy/sec; Bug Bite reaches a 40-energy move two full turns sooner. The engine now sees the difference. <i>(Named for the one who caught it.)</i></div>
     <div class="hp-tip"><b>🗂 Tap any nightmare</b> to open it as a <b>stacked tab</b> over your work — your squad stays exactly where it is. <b>←</b> minimizes it (it's recoverable), <b>×</b> closes it. Both need a short press-and-hold, so you can't nuke a tab by accident. <kbd>Esc</kbd> always backs out.</div>
   </details>
 
@@ -2705,7 +2705,7 @@ try{
   <div class="jackpot-overlay" id="dedicationOverlay">
     <div class="jackpot-panel dedi-panel">
       <div class="dedi-head">💌 From the developer</div>
-      <p class="dedi-text">This application was made to help my girlfriend <b>“Abbie”</b> find good poké-combos to use on PoGo. I love seeing her smile — and she certainly deserves smooth sailing :D</p>
+      <p class="dedi-text">This application was made to help my girlfriend <b>“Rouge”</b> find good poké-combos to use on PoGo. I love seeing her smile — and she certainly deserves smooth sailing :D</p>
       <p class="dedi-text">Also, a kudos to my big brother <b>Hax</b>. He put me onto mostly everything anime — I remember watching Buggy get chopped when I was 6.</p>
       <p class="dedi-text">And thank <i>you</i> people as well. Have fun gaming on PoGo, and remember to lower your pride. However — that doesn't mean be a coward tho.</p>
       <p class="dedi-text dedi-bless">Jesus loves you.</p>
@@ -3660,7 +3660,7 @@ function nmDpe(c, stabTypes){
   const s = stabTypes.includes((c.type||'').toLowerCase()) ? 1.2 : 1;
   return (c.power*s)/Math.max(1, c.energy||1);
 }
-// TURN PARITY — "the Abbie rule" (v37). Her catch, in one line: a 1-turn fast
+// TURN PARITY — "the Rouge rule" (v37). Her catch, in one line: a 1-turn fast
 // move and a 4-turn fast move with identical energy-per-second are NOT the
 // same weapon. Bug Bite (1T, 3e) and Splash (4T, 12e) are both 6 e/s, and the
 // old continuous math (energy ÷ cheapest) scored them identically. Two real
@@ -3878,20 +3878,31 @@ window.__bnTabs = [];        // visible stack, top = last item
 window.__bnMinimizedTabs = []; // minimized, restorable
 let __bnTabSeq = 0;
 
+// v43: the tab system holds EXACTLY ONE lock reference no matter how many
+// tabs are stacked. The old code acquired per-open and released once-on-empty,
+// which under the v39 refcount left the count > 0 forever after multi-tab use
+// — a frozen, unscrollable page with nothing on screen. The founder found it.
+window.__bnTabsLockHeld = false;
+function tabsLockSync(){
+  const need = window.__bnTabs.length > 0;
+  if(need && !window.__bnTabsLockHeld){ lockBodyScroll(true); window.__bnTabsLockHeld = true; }
+  else if(!need && window.__bnTabsLockHeld){ lockBodyScroll(false); window.__bnTabsLockHeld = false; }
+}
+
 function openMonTab(speciesId){
   const mon = POKEMON.find(p => p.speciesId === speciesId);
   if(!mon) return;
   const tabId = 'tab' + (++__bnTabSeq);
   window.__bnTabs.push({ id: tabId, speciesId });
   renderTabStack({ animateInId: tabId });
-  lockBodyScroll(true);
+  tabsLockSync();
 }
 
 function closeTab(tabId){
   window.__bnTabs = window.__bnTabs.filter(t => t.id !== tabId);
   window.__bnMinimizedTabs = window.__bnMinimizedTabs.filter(t => t.id !== tabId);
   renderTabStack({});
-  if(!window.__bnTabs.length) lockBodyScroll(false);
+  tabsLockSync();
 }
 
 function minimizeTab(tabId){
@@ -3900,7 +3911,7 @@ function minimizeTab(tabId){
   const [tab] = window.__bnTabs.splice(idx, 1);
   window.__bnMinimizedTabs.push(tab);
   renderTabStack({});
-  if(!window.__bnTabs.length) lockBodyScroll(false);
+  tabsLockSync();
 }
 
 function restoreMinimized(){
@@ -3908,7 +3919,7 @@ function restoreMinimized(){
   if(!tab) return;
   window.__bnTabs.push(tab);
   renderTabStack({ animateInId: tab.id });
-  lockBodyScroll(true);
+  tabsLockSync();
 }
 
 let __bnScrollY = 0, __bnLockCount = 0;
@@ -3930,6 +3941,25 @@ function lockBodyScroll(on){
     window.scrollTo(0, __bnScrollY);
   }
 }
+
+// v43: SELF-HEALING WATCHDOG. If the body is ever locked while NOTHING that
+// should hold the lock is actually open (no tabs, no help panel), force-release.
+// Runs on tab-return and window focus — the exact moments the founder hit the
+// frozen page. Defense in depth: even if a future leak slips past review, the
+// page heals itself instead of demanding a refresh that eats your squad.
+function healBodyLock(){
+  const tabsOpen = window.__bnTabs && window.__bnTabs.length > 0;
+  const helpOpen = !!document.querySelector('#helpPanel.show');
+  if(!tabsOpen && !helpOpen && document.body.classList.contains('tabs-open')){
+    __bnLockCount = 0;
+    window.__bnTabsLockHeld = false;
+    document.body.classList.remove('tabs-open');
+    document.body.style.top = '';
+    window.scrollTo(0, __bnScrollY);
+  }
+}
+window.addEventListener('focus', healBodyLock);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) healBodyLock(); });
 
 // Press-and-hold (150ms) or hover-then-click confirms back/close — guards
 // against an accidental tap nuking a tab you meant to keep.
@@ -4083,7 +4113,13 @@ function renderMinimizedPill(){
     document.body.appendChild(pill);
     pill.addEventListener('click', restoreMinimized);
   }
-  pill.textContent = `🎣 ${n} minimized`;
+  // v43: name WHO is minimized. Shows the tab you'd get back (restore pops
+  // the most recent), with a +N for the rest behind it.
+  const last = window.__bnMinimizedTabs[n-1];
+  const lastMon = last && POKEMON.find(p=>p.speciesId===last.speciesId);
+  const who = lastMon ? lastMon.speciesName : 'tab';
+  pill.textContent = n === 1 ? `🎣 ${who}` : `🎣 ${who} +${n-1}`;
+  pill.title = window.__bnMinimizedTabs.map(t=>{const m=POKEMON.find(p=>p.speciesId===t.speciesId);return m?m.speciesName:t.speciesId;}).join(', ');
 }
 const __origRenderTabStack = renderTabStack;
 renderTabStack = function(opts){ __origRenderTabStack(opts); renderMinimizedPill(); };
@@ -5407,6 +5443,21 @@ setTimeout(()=>{ document.body.classList.add('theme-ready'); }, 250);
     SEARCH.disabled = true;
     await loadGameData();
     loadData();
+    // v43: the working squad survives a refresh. The founder lost a whole
+    // session's build to a frozen page + forced reload; never again. Entries
+    // are self-contained loadout objects, so restore is a straight parse —
+    // we just drop any species that no longer exists after a data update.
+    try{
+      const saved = await window.storage.get('workingSquad', false);
+      if(saved && saved.value){
+        const parsed = JSON.parse(saved.value);
+        if(Array.isArray(parsed) && parsed.length){
+          squad = parsed.filter(m => m && POKEMON.some(p => p.speciesId === m.speciesId)).slice(0,3);
+          if(squad.length) renderSquad();
+        }
+      }
+    }catch(e){ /* no saved squad, or storage unavailable — fresh start */ }
+    window.__bnSquadHydrated = true;
   }catch(err){
     console.error(err);
     STATUS.textContent = '⚠ Could not load gamemaster.json. If you opened this file directly, it needs to be served over http (Netlify does this) — a file:// page can\'t fetch its neighbours.';
@@ -5602,6 +5653,13 @@ function removeFromSquad(speciesId){
 }
 
 function renderSquad(){
+  // v43: fire-and-forget persistence — every squad change survives refresh.
+  // Gated on hydration: early boot calls renderSquad() with an empty squad
+  // BEFORE the restore runs, and without the gate that first render would
+  // overwrite the saved squad with []. (Found by the test, not the users.)
+  if(window.__bnSquadHydrated){
+    try{ window.storage.set('workingSquad', JSON.stringify(squad), false).catch(()=>{}); }catch(e){}
+  }
   const slots = [];
   for(let i=0;i<3;i++){
     const m = squad[i];
