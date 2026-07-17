@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v38-2026-07-16">
+<meta name="app-version" content="v41-2026-07-17">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -123,6 +123,15 @@
   .ms-flash label:nth-child(3){animation-delay:0.6s;}
   @keyframes msPulse{0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 2px var(--signal), 0 0 16px rgba(var(--glow-rgb),0.5);}}
   .qa-analyze{flex:0 0 auto;padding:10px 12px;border-radius:9px;border:1px solid var(--signal-dim);background:rgba(var(--glow-rgb),0.14);color:var(--signal);font-family:var(--mono);font-weight:700;font-size:14px;cursor:pointer;line-height:1;}
+  /* v39: squad just hit 3/3 — the ⚡ pulses four times to say "I'm next". */
+  @keyframes qaNudge{
+    0%,100%{transform:scale(1); box-shadow:0 0 0 0 rgba(var(--glow-rgb),0.55);}
+    50%{transform:scale(1.14); box-shadow:0 0 0 9px rgba(var(--glow-rgb),0);}
+  }
+  .qa-analyze.qa-nudge{animation:qaNudge 0.85s ease-in-out 4; background:rgba(var(--glow-rgb),0.28);}
+  @media (prefers-reduced-motion: reduce){
+    .qa-analyze.qa-nudge{animation:none; box-shadow:0 0 14px rgba(var(--glow-rgb),0.55); background:rgba(var(--glow-rgb),0.28);}
+  }
   .qa-analyze[disabled]{opacity:0.35;cursor:default;}
   /* the dedication long-hold used to block ALL scroll here (touch-action:none).
      Now: normal scroll works, and a JS scroll-lock only kicks in past a 300ms hold
@@ -830,7 +839,7 @@
     box-shadow:0 6px 18px rgba(0,0,0,0.35);
   }
   .help-fab:hover{background:rgba(var(--glow-rgb),0.15);}
-  .help-backdrop{display:none;position:fixed;inset:0;z-index:140;background:rgba(0,0,0,0.35);}
+  .help-backdrop{display:none;position:fixed;inset:0;z-index:140;background:rgba(0,0,0,0.35);touch-action:none;}
   .help-backdrop.show{display:block;}
   .help-panel{
     display:none;
@@ -838,6 +847,14 @@
     top:calc(env(safe-area-inset-top, 0px) + 48px);
     right:12px;
     width:min(320px, calc(100vw - 24px));
+    /* v39: the panel scrolls ITSELF. Without a height cap + overflow, help
+       content taller than the screen made iOS chain the swipe to the page
+       BEHIND the panel — you'd scroll the app while trying to read the help.
+       overscroll-behavior:contain stops the chain at the panel's edges. */
+    max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 72px);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
     background:var(--panel);
     border:1px solid var(--signal-dim);
     border-radius:14px;
@@ -2204,6 +2221,25 @@
     padding:16px 16px;
   }
   .saved-card-names{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4;}
+  .saved-card-title{font-size:13.5px;font-weight:700;color:var(--signal);margin-bottom:2px;line-height:1.3;}
+  .saved-card-names.sub{font-size:11px;font-weight:500;opacity:.7;margin-bottom:6px;}
+  .rename-btn{background:none;border:1px solid var(--signal-dim);border-radius:7px;padding:4px 8px;cursor:pointer;font-size:11px;line-height:1;}
+  .saved-name-input{
+    width:100%;font-family:var(--sans);font-size:13px;font-weight:600;
+    padding:5px 8px;margin-bottom:6px;border-radius:7px;
+    border:1px solid var(--signal);background:rgba(var(--glow-rgb),0.08);
+    color:inherit;outline:none;
+  }
+  /* v40: dwell glow — squad panel held in view ~12s, gently light the exits.
+     A slow breath, not a shout; disabled buttons stay dark. */
+  @keyframes dwellBreath{
+    0%,100%{box-shadow:0 0 0 0 rgba(var(--glow-rgb),0);}
+    50%{box-shadow:0 0 12px 2px rgba(var(--glow-rgb),0.35);}
+  }
+  .dwell-glow:not(:disabled){animation:dwellBreath 2.6s ease-in-out infinite;}
+  @media (prefers-reduced-motion: reduce){
+    .dwell-glow:not(:disabled){animation:none;box-shadow:0 0 10px rgba(var(--glow-rgb),0.3);}
+  }
   .saved-card-actions{display:flex;gap:12px;margin-top:8px;}
   .saved-card-actions button{
     background:none;border:none;
@@ -3875,13 +3911,20 @@ function restoreMinimized(){
   lockBodyScroll(true);
 }
 
-let __bnScrollY = 0;
+let __bnScrollY = 0, __bnLockCount = 0;
+// v39: reference-counted — the help panel now uses this lock too. If a mon
+// tab and the help panel are ever open together, the page stays locked until
+// BOTH release; without the count, closing one would unlock under the other.
 function lockBodyScroll(on){
   if(on){
+    __bnLockCount++;
+    if(__bnLockCount > 1) return;
     __bnScrollY = window.scrollY;
     document.body.style.top = (-__bnScrollY) + 'px';
     document.body.classList.add('tabs-open');
   } else {
+    __bnLockCount = Math.max(0, __bnLockCount - 1);
+    if(__bnLockCount > 0) return;
     document.body.classList.remove('tabs-open');
     document.body.style.top = '';
     window.scrollTo(0, __bnScrollY);
@@ -4393,13 +4436,19 @@ function renderQuickAddBar(mon){
   window.__bnLastQuickMon = mon;
   const inSquad = squad.some(s => s.speciesId === mon.speciesId);
   const squadFull = squad.length >= 3;
+  // v39: the founder's nudge — the moment the THIRD mon lands, the ⚡ button
+  // pulses a few times. Fires on the 2→3 transition only (not on every
+  // re-render of a full squad), and re-arms when the squad drops below 3,
+  // so every freshly-completed squad gets its own nudge.
+  const becameFull = squad.length === 3 && (window.__bnPrevSquadLen ?? 0) < 3;
+  window.__bnPrevSquadLen = squad.length;
   const btnLabel = inSquad ? '✓ In squad — remove' : (squadFull ? 'Squad full — manage ↓' : `+ Add ${mon.speciesName} to squad`);
 
   const mainLeague = document.getElementById('leagueSelect');
   const currentLeague = mainLeague ? mainLeague.value : 'Great League';
   bar.innerHTML = `
     <button class="add-squad-btn${inSquad?' in-squad':''}" id="addSquadBtn">${btnLabel}</button>
-    <button class="qa-analyze" id="qaAnalyzeBtn" title="Analyze squad synergy" aria-label="Analyze squad synergy" ${squad.length < 2 ? 'disabled' : ''}>⚡</button>
+    <button class="qa-analyze${becameFull?' qa-nudge':''}" id="qaAnalyzeBtn" title="Analyze squad synergy" aria-label="Analyze squad synergy" ${squad.length < 2 ? 'disabled' : ''}>⚡</button>
     <select class="league-select league-select-mini" id="qaLeagueSelect" aria-label="League">
       ${['Great League','Ultra League','Master League'].map(l=>`<option ${l===currentLeague?'selected':''}>${l}</option>`).join('')}
     </select>
@@ -4627,20 +4676,29 @@ function loadData(){
     CAPTION.style.top = captionTop + 'px';
   }
 
+  // v41: ONE settle timer, shared and cancelable. Two real bugs lived here:
+  // each renderStep spawned its own anonymous interval, so (1) tapping Next
+  // during the ~0.3–1.8s smooth-scroll settle left the OLD step's timer alive
+  // to fire later and repaint a stale step over the new one, and (2) the old
+  // button stayed live through the glide, so an impatient double-tap silently
+  // skipped a step. Canceling the pending settle at the top of every render
+  // means: last tap wins, exactly one step per tap, no ghost repaints.
+  let __settleT = null;
   function renderStep(){
     const step = TOUR_STEPS[stepIndex];
     const el = document.querySelector(step.selector);
     if(!el){ tourDir < 0 ? prevStep() : nextStep(); return; }
+    if(__settleT){ clearInterval(__settleT); __settleT = null; }
     const isFixed = getComputedStyle(el).position === 'fixed';
     if(isFixed){ place(); return; }
     el.scrollIntoView({behavior:'smooth', block:'center'});
     // wait until the smooth scroll actually lands: two stable rect reads in a row
     let lastTop = null, stable = 0, tries = 0;
-    const settle = setInterval(()=>{
+    __settleT = setInterval(()=>{
       const t = el.getBoundingClientRect().top;
       if(lastTop !== null && Math.abs(t - lastTop) < 1.5) stable++; else stable = 0;
       lastTop = t; tries++;
-      if(stable >= 2 || tries > 16){ clearInterval(settle); place(); }
+      if(stable >= 2 || tries > 16){ clearInterval(__settleT); __settleT = null; place(); }
     }, 110);
     function place(){
       curTourEl = el;
@@ -4739,6 +4797,7 @@ function loadData(){
   }
 
   function endTour(){
+    if(__settleT){ clearInterval(__settleT); __settleT = null; }  // no ghost repaint after Done
     touring = false;
     curTourEl = null;
     document.body.classList.remove('touring');
@@ -4784,6 +4843,18 @@ function loadData(){
   if(!fab || !panel) return;
   const backdrop = document.getElementById('helpBackdrop');
   function syncBackdrop(){ if(backdrop) backdrop.classList.toggle('show', panel.classList.contains('show')); }
+  // v39: lock the page behind the panel. One observer on the `show` class
+  // covers EVERY open/close path (fab, outside tap, tour button, future ones)
+  // instead of chasing each call site. Same pattern the help-glints use.
+  let __helpLocked = false;
+  function syncScrollLock(){
+    const open = panel.classList.contains('show');
+    if(open && !__helpLocked){ lockBodyScroll(true); __helpLocked = true; }
+    else if(!open && __helpLocked){ lockBodyScroll(false); __helpLocked = false; }
+  }
+  new MutationObserver(syncScrollLock).observe(panel, {attributes:true, attributeFilter:['class']});
+  // Backup: a swipe that starts on the dimmed backdrop must go nowhere.
+  if(backdrop) backdrop.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
   fab.addEventListener('click', (e)=>{
     e.stopPropagation();
     panel.classList.toggle('show');
@@ -6199,10 +6270,10 @@ SAVE_BTN.addEventListener('click', async ()=>{
     return;
   }
 
-  const entry = {id: Date.now(), squad: JSON.parse(JSON.stringify(squad))};
+  const entry = {id: Date.now(), name: null, squad: JSON.parse(JSON.stringify(squad))};
   account.teams[league] = [...existing, entry];
   await persistAccount();
-  SAVE_MSG.textContent = `Saved to ${league} (${account.teams[league].length}/${cap} slots used).`;
+  SAVE_MSG.textContent = `Saved to ${league} (${account.teams[league].length}/${cap} slots used). Tap ✏️ in the vault to name it.`;
   renderSavedTeams();
 });
 
@@ -6221,17 +6292,26 @@ async function deleteSavedTeam(league, id){
   renderSavedTeams();
 }
 
+// Team names are user-typed text rendered into HTML — escape, always.
+function escName(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function renderSavedTeams(){
   const cap = TIER_CAPS[account.tier] ?? 0;
   SAVED_TEAMS_EL.innerHTML = LEAGUES.map(league => {
     const teams = account.teams[league] || [];
     const cards = teams.map(t => {
       const names = t.squad.map(m=>m.speciesName).join(' · ');
+      // v40: nameable teams. Saving is already premium-gated, so anyone with
+      // a card here has earned the pen. Unnamed teams read as before.
+      const title = t.name
+        ? `<div class="saved-card-title">${escName(t.name)}</div><div class="saved-card-names sub">${names}</div>`
+        : `<div class="saved-card-names">${names}</div>`;
       return `
         <div class="saved-card">
-          <div class="saved-card-names">${names}</div>
+          ${title}
           <div class="saved-card-actions">
             <button class="load-btn" data-league="${league}" data-id="${t.id}">load</button>
+            <button class="rename-btn" data-league="${league}" data-id="${t.id}" title="Name this team">✏️</button>
             <button class="del" data-league="${league}" data-id="${t.id}">delete</button>
           </div>
         </div>`;
@@ -6253,9 +6333,65 @@ function renderSavedTeams(){
   [...SAVED_TEAMS_EL.querySelectorAll('.del')].forEach(btn=>{
     btn.addEventListener('click', ()=> deleteSavedTeam(btn.dataset.league, Number(btn.dataset.id)));
   });
+  [...SAVED_TEAMS_EL.querySelectorAll('.rename-btn')].forEach(btn=>{
+    btn.addEventListener('click', ()=> startRenameTeam(btn));
+  });
+}
+
+// Inline rename: the card's title swaps to an input right where it sits —
+// no prompt() (ugly on iOS), no modal. Enter or tap-away commits; empty
+// clears the name and the card falls back to its species list.
+function startRenameTeam(btn){
+  const league = btn.dataset.league, id = Number(btn.dataset.id);
+  const entry = (account.teams[league]||[]).find(t => t.id === id);
+  if(!entry) return;
+  const card = btn.closest('.saved-card');
+  const titleEl = card.querySelector('.saved-card-title') || card.querySelector('.saved-card-names');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'saved-name-input';
+  input.maxLength = 24;
+  input.placeholder = 'Team name…';
+  input.value = entry.name || '';
+  titleEl.replaceWith(input);
+  input.focus(); input.select();
+  let done = false;
+  async function commit(){
+    if(done) return; done = true;
+    const v = input.value.trim().slice(0,24);
+    entry.name = v || null;
+    await persistAccount();
+    renderSavedTeams();
+  }
+  input.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); input.blur(); } });
+  input.addEventListener('blur', commit);
 }
 
 loadAccount();
+
+// ---- v40: dwell glow — the founder's read of the moment of hesitation. ----
+// Someone scrolls to the squad panel, sits there 10–15s, unsure what's next.
+// After 12s of the panel actually being on screen (with a squad started),
+// Analyze / Save team / Clear squad breathe softly. Clicking any of them —
+// or analyzing — retires the glow for the session; it's a hint, not a nag.
+(function(){
+  const panel = document.getElementById('squadPanel');
+  if(!panel || !('IntersectionObserver' in window)) return;
+  const targets = ['analyzeBtn','saveBtn','clearBtn'].map(id=>document.getElementById(id)).filter(Boolean);
+  let timer = null, fired = false, retired = false;
+  function glow(on){ targets.forEach(b=>b.classList.toggle('dwell-glow', on)); }
+  const obs = new IntersectionObserver((entries)=>{
+    const vis = entries[0].isIntersecting;
+    if(retired) return;
+    if(vis && !fired && !timer && squad.length >= 1){
+      timer = setTimeout(()=>{ timer = null; if(!retired && squad.length >= 1){ fired = true; glow(true); } }, 12000);
+    } else if(!vis && timer){
+      clearTimeout(timer); timer = null;   // left before the moment ripened
+    }
+  }, {threshold: 0.4});
+  obs.observe(panel);
+  targets.forEach(b=>b.addEventListener('click', ()=>{ retired = true; glow(false); if(timer){ clearTimeout(timer); timer = null; } obs.disconnect(); }));
+})();
 
 // ---- Bottom tab bar: Teams / Profile ----
 const TAB_TEAMS = document.getElementById('tabTeams');
