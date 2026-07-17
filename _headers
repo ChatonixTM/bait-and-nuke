@@ -1,13 +1,2 @@
-# Netlify cache rules.
-#
-# gamemaster.json is ~441KB and changes only when Pokémon GO's data changes
-# (i.e. rarely — it's been byte-identical since June 7). Cache it hard so Abbie
-# and every other visitor download it ONCE, not on every cache miss.
 /gamemaster.json
-  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
-
-# The app itself is small now (~250KB) and changes constantly. Always
-# revalidate, so a deploy is visible immediately instead of being masked by a
-# stale cached copy.
-/index.html
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=604800
