@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v43-2026-07-17">
+<meta name="app-version" content="v44-2026-07-17">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -975,12 +975,19 @@
      side (Command Deck underneath stays put, like dishes left on the table)
      and it snaps back the instant you scroll up or hit the top again. */
   .search-shell.yanked .search-box{
-    transform:translateX(-130%) rotate(-6deg);
+    /* v44: "Translucent from The Boys" — the founder's spec. The old yank
+       (translateX + rotate + max-height:0 + padding collapse) CHANGED LAYOUT,
+       reflowing every line you were reading — the "slight jump". Now it fades
+       IN PLACE: opacity only, space always kept, zero reflow, no zip. */
     opacity:0;
-    max-height:0;
-    padding-top:0; padding-bottom:0;
-    margin-bottom:0;
-    border-color:transparent;
+    pointer-events:none;
+    transition:opacity .28s ease;
+  }
+  .search-shell .search-box{ transition:opacity .28s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  @media (pointer:fine){
+    /* Desktop doesn't need it gone — just out of the way. A ghost at 22%,
+       fading slower, snapping back on any scroll-up. */
+    .search-shell.yanked .search-box{ opacity:.22; transition:opacity .5s ease; }
   }
   .search-shell.yanked .suggestions{display:none !important;}
   .search-box:focus-within{border-color:var(--signal-dim);}
