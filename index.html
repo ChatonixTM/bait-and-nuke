@@ -4,7 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v45-2026-07-18">
+<meta name="app-version" content="v46-2026-07-18">
+<meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
+<meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
+<meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://starlit-sunflower-f3e0cd.netlify.app">
+<meta property="og:site_name" content="Bait & Nuke">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
+<meta name="twitter:description" content="Movesets, nightmares, and honest math for GO Battle League. Free, private, offline-ready.">
+<meta name="theme-color" content="#0d1117">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -1560,6 +1570,17 @@
     line-height:1.4; color:var(--text-dim); opacity:.75;
   }
   .nm-turns{ opacity:.7; font-size:8.5px; letter-spacing:.02em; }
+  /* v46: tap-tooltip bubble — explanations, finally reachable by thumb. */
+  .tap-tip{
+    position:absolute; z-index:1300; padding:9px 12px;
+    background:var(--panel); color:var(--text);
+    border:1px solid var(--signal-dim); border-radius:10px;
+    font-size:12px; line-height:1.45; font-family:var(--sans);
+    box-shadow:0 12px 32px rgba(0,0,0,0.5);
+    animation:tipIn .18s ease;
+    pointer-events:none;
+  }
+  @keyframes tipIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
 
   /* ---- Mon tabs (overlay "browser tabs" for Worst Nightmares drill-down) --- */
   body.tabs-open{overflow:hidden;position:fixed;width:100%;}
@@ -2657,7 +2678,7 @@ try{
   <div class="brand-wordmark"><span class="bw-emoji">🎣</span> <span class="bw-bait">Bait</span> <span class="bw-amp">&amp;</span> <span class="bw-nuke">Nuke</span> <span class="bw-emoji">💣</span></div>
   <div class="eyebrow">recon // moveset analyzer</div>
   <h1>Know your moveset before you build the team.</h1>
-  <p class="sub">Search any Pokémon. See how hard it hits, how fast it charges up, and what to expect from every move combo — pulled live from PvPoke's open move data.</p>
+  <p class="sub">Search any Pokémon. See what to run, who beats you — and <em>why</em>. Live roster &amp; moves synced from PvPoke's open data — free, private, works offline.</p>
 
   <div class="pre-search-row">
     <button class="tour-trigger" id="tourTrigger">🎓 New here? Take a 30-second tour</button>
@@ -5556,10 +5577,23 @@ const LEAGUES = ['Great League', 'Ultra League', 'Master League'];
 //   would risk telling someone they qualify when they actually don't.
 // - Kanto Cup, Electric Cup, Catch Cup: mentioned in recent season recaps, but no
 //   verified type-restriction details found — left out rather than guessed.
+// v46: DATE-AWARE ROTATION. Niantic published the whole Forever Forward
+// schedule, so the remaining season is encoded with real UTC boundaries
+// (rotations flip at 1:00 p.m. PDT = 20:00 UTC). The live cup now picks
+// ITSELF at load time — no more stale-Tuesday problem within a season.
+// Season ends Sep 8; re-encode when the next season's schedule drops.
+const ALL_TYPES = ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
 const CUPS = [
   { name: 'Retro Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
-    window: 'Jul 14 – Jul 21, 2026', emoji: '🕹️', live: true },
+    window: 'Jul 14 – Jul 21, 2026', emoji: '🕹️',
+    startISO: '2026-07-14T20:00:00Z', endISO: '2026-07-21T20:00:00Z' },
+  { name: 'All Standard Leagues week (GL · UL · ML)', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Jul 21 – Jul 28, 2026 · 4× Stardust', emoji: '⚔️',
+    startISO: '2026-07-21T20:00:00Z', endISO: '2026-07-28T20:00:00Z', noTypeCup: true },
+  { name: 'Master Premier week (GL · Master Premier)', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Jul 28 – Aug 4, 2026 · 4× Stardust', emoji: '🏟️',
+    startISO: '2026-07-28T20:00:00Z', endISO: '2026-08-04T20:00:00Z', noTypeCup: true },
   { name: 'Fantasy Cup: Ultra League Edition', league: 'Ultra League', cpCap: 2500,
     types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
@@ -5571,7 +5605,21 @@ const CUPS = [
   { name: 'Scroll Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['water','fighting','dark'], window: 'recent rotation', emoji: '📜' }
 ];
-let selectedCupIndex = 0;
+// Pick the live cup by the clock; fall back to the most recently ended one.
+(function(){
+  const now = Date.now();
+  let liveIdx = -1, lastEnded = -1, lastEndT = -Infinity;
+  CUPS.forEach((c,i)=>{
+    if(!c.startISO) return;
+    const s = Date.parse(c.startISO), e = Date.parse(c.endISO);
+    if(now >= s && now < e) liveIdx = i;
+    if(now >= e && e > lastEndT){ lastEndT = e; lastEnded = i; }
+  });
+  const pick = liveIdx >= 0 ? liveIdx : (lastEnded >= 0 ? lastEnded : 0);
+  CUPS.forEach((c,i)=> c.live = (i === pick && liveIdx >= 0));
+  window.__bnCupDefault = pick;
+})();
+let selectedCupIndex = window.__bnCupDefault ?? 0;
 
 function updateStatusForCup(){
   if(!POKEMON.length) return; // roster not loaded yet
@@ -5872,7 +5920,13 @@ function loadSquadFromCode(code){
     const nuke = MOVES[entry.n];
     const bait = entry.b ? MOVES[entry.b] : null;
     if(!mon || !fast || !nuke) continue;
-    loaded.push(buildLoadoutEntry(mon, fast, bait, nuke, entry.iv || null));
+    // v46: coerce imported IVs to plain numbers. Everything else in a share
+    // code is a lookup key (fails safe), but IVs flow toward display — a
+    // crafted code could smuggle markup through them. Numbers only, always.
+    const iv = entry.iv ? { atk: Math.max(0, Math.min(15, +entry.iv.atk || 0)),
+                            def: Math.max(0, Math.min(15, +entry.iv.def || 0)),
+                            hp:  Math.max(0, Math.min(15, +entry.iv.hp  || 0)) } : null;
+    loaded.push(buildLoadoutEntry(mon, fast, bait, nuke, iv));
   }
   if(!loaded.length) return {ok:false, error:"Couldn't match that code to Pokémon in this roster."};
   squad = loaded;
@@ -6475,6 +6529,46 @@ function startRenameTeam(btn){
 }
 
 loadAccount();
+
+// ---- v46: TAP TOOLTIPS — the review's sharpest rookie finding. Every stat
+// explanation in this app lived in title attributes, which REQUIRE A MOUSE.
+// On the device most users hold, our own explanations were unreachable.
+// Now: on touch devices, tapping any non-interactive element that carries a
+// title shows its text in a bubble. Interactive elements (buttons, selects,
+// links) keep their normal behavior. Tap anywhere else to dismiss.
+(function(){
+  const isTouch = (window.matchMedia && (matchMedia('(hover: none)').matches || matchMedia('(pointer: coarse)').matches)) || ('ontouchstart' in window);
+  if(!isTouch) return; // touch only — hover devices already have tooltips
+  let bubble = null;
+  function dismiss(){ if(bubble){ bubble.remove(); bubble = null; } }
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest('[title]');
+    // v46 fix: nightmare cards are <button>s for accessibility, so "any
+    // interactive ancestor" disqualified every stat inside them. The right
+    // rule: only skip when the TITLED ELEMENT ITSELF is a control (the ⚡
+    // analyze button keeps analyzing) or the tap landed on a form field.
+    const interactive = el && (el.matches('button, select, input, textarea, a, option, label')
+                        || e.target.closest('select, input, textarea, option'));
+    if(!el || interactive || !el.getAttribute('title')){ dismiss(); return; }
+    e.stopPropagation();           // a stat tap explains the stat — it doesn't
+    e.preventDefault();            // trigger the card underneath it
+    dismiss();
+    bubble = document.createElement('div');
+    bubble.className = 'tap-tip';
+    bubble.textContent = el.getAttribute('title');
+    document.body.appendChild(bubble);
+    const r = el.getBoundingClientRect(), bw = Math.min(280, window.innerWidth - 24);
+    bubble.style.maxWidth = bw + 'px';
+    const bh = bubble.offsetHeight, bwActual = bubble.offsetWidth;
+    let top = r.top - bh - 10; if(top < 8) top = r.bottom + 10;
+    let left = r.left + r.width/2 - bwActual/2;
+    left = Math.max(12, Math.min(left, window.innerWidth - bwActual - 12));
+    bubble.style.top = (top + window.scrollY) + 'px';
+    bubble.style.left = left + 'px';
+    setTimeout(dismiss, 4200);     // self-clears; next tap also clears
+  }, true);
+  window.addEventListener('scroll', dismiss, {passive:true});
+})();
 
 // ---- v40: dwell glow — the founder's read of the moment of hesitation. ----
 // Someone scrolls to the squad panel, sits there 10–15s, unsure what's next.
