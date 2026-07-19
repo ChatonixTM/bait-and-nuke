@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v51-2026-07-19">
+<meta name="app-version" content="v52-2026-07-19">
 <meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
 <meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
 <meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
@@ -1548,6 +1548,11 @@
   .compact-ivs #ivZone{display:none;}
   .compact-ivs #ivZoneToggle{display:block;}
   .slot-name{cursor:pointer;}
+  /* v52: mega chips in tabs */
+  .mega-row{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 2px;}
+  .mega-chip{padding:7px 11px;border-radius:9px;border:1px solid var(--signal-dim);
+    background:rgba(var(--glow-rgb),0.10);color:var(--signal);font-family:var(--mono);
+    font-size:11px;font-weight:700;cursor:pointer;}
   /* v49: THE SECRET DEX 🥚 — type the word, enter the archive. */
   #secretDex{display:none;position:fixed;inset:0;z-index:1400;background:rgba(13,10,8,.97);
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px 14px 40px;}
@@ -4102,6 +4107,21 @@ function renderTabContentHTML(mon, tabId, depth){
         Dmg/sec: ${loadout.cycleDps.toFixed(2)}
       </div>
       <button class="mon-tab-add" id="${tabId}_add" ${canAdd ? '' : 'disabled'}>${squad.some(s=>s.speciesId===mon.speciesId) ? '✓ In squad' : (squad.length>=3 ? 'Squad full' : '+ Add to squad')}</button>
+      ${(function(){
+        // v52: MEGA variants — if this mon has megas in the roster, offer
+        // them right here; if this IS a mega, offer the way back to base.
+        const isMega = /_mega|_primal/.test(mon.speciesId);
+        const baseId = mon.speciesId.replace(/_mega.*$|_primal$/, '');
+        const kin = isMega
+          ? POKEMON.filter(p => p.speciesId === baseId)
+          : POKEMON.filter(p => p.speciesId.startsWith(mon.speciesId + '_mega') || p.speciesId === mon.speciesId + '_primal');
+        if(!kin.length) return '';
+        const chips = kin.map(p => {
+          const label = isMega ? ('↩ ' + p.speciesName) : ('⚡ ' + (p.speciesName.match(/\(([^)]+)\)/) ? p.speciesName.match(/\(([^)]+)\)/)[1] : 'Mega'));
+          return `<button class="mega-chip" data-sid="${p.speciesId}">${label}</button>`;
+        }).join('');
+        return `<div class="mega-row">${chips}</div>`;
+      })()}
 
       ${nightmareBoardHTML(nightmares, mon.speciesName, 'tap a nightmare to stack another tab — this one stays put')}
     </div>
@@ -4149,6 +4169,9 @@ function renderTabStack(opts){
     });
     card.querySelectorAll('.nightmare-card').forEach(el=>{
       el.addEventListener('click', ()=> openMonTab(el.dataset.id));
+    });
+    card.querySelectorAll('.mega-chip').forEach(el=>{
+      el.addEventListener('click', ()=> openMonTab(el.dataset.sid));
     });
   });
 
@@ -4216,7 +4239,13 @@ function monDex(x){
 function spriteImg(x, size, cls){
   const dex = monDex(x);
   if(!dex) return '';
-  return `<img class="sprite ${cls||''}" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dex}.png" width="${size}" height="${size}" loading="lazy" alt="" onerror="this.remove()">`;
+  // v52: ANIMATED sprites (the founder found Smogon and fell in love). Gen 5
+  // animated GIFs exist for dex <= 649; try those first, fall back to the
+  // static PNG, and if even that fails, vanish gracefully. Same CDN, same
+  // offline manners.
+  const staticSrc = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dex}.png`;
+  const animSrc = dex <= 649 ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${dex}.gif` : staticSrc;
+  return `<img class="sprite ${cls||''}" src="${animSrc}" width="${size}" height="${size}" loading="lazy" alt="" data-static="${staticSrc}" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}">`;
 }
 
 // v45: THE SQUAD SWITCHER — the founder's ask, verbatim: "once a mon is
@@ -4786,6 +4815,10 @@ function loadData(){
       text:'This bar follows you down the page. It <b>scrolls sideways</b> — swipe it. Add · ⚡ Analyze · League · Clear squad all live here. A <b>›</b> appears when there\'s more to reach.' },
     { selector:'#quickAddBar, .search-shell', title:'⚡ Analyze synergy',
       text:'Unlocks at 2+ Pokémon. It reads your squad against <b>this league\'s</b> own power scale — Master League never gets judged by Great League\'s rules.' },
+    { selector:'#result, .main-content', title:'👆 Tap any number',
+      text:'Every stat explains itself — tap <b>⚡</b>, <b>💥</b>, <b>⏱</b>, or any table header and a plain-English bubble tells you exactly what it means. No jargon left behind.' },
+    { selector:'.squad-slots, #quickAddBar', title:'🔁 Jump between your mons',
+      text:'Once your squad has members, tap <b>any squad card</b> (or its chip in the Command Deck) to switch the whole view to that Pokémon — <b>your</b> moves, <b>your</b> kit, never rerolled. The IV tools tuck away behind one 🎯 button.' },
     { selector:'#result, .main-content', title:'😱 Worst Nightmares — in tiers',
       text:'Search a mon and scroll to its threat board. <b>💀 Tier 1</b> hard-counters you (type advantage + fast shield pressure). <b>🪨 Tier 2</b> grinds you out — <i>no type advantage needed</i>. <b>🎲 Tier 3</b> looks scary but has no engine behind it.' },
     { selector:'#result, .main-content', title:'🗂 Tap a nightmare — it stacks',
@@ -4797,7 +4830,7 @@ function loadData(){
     { selector:'#tabProfile', title:'Profile',
       text:'Themes, membership tier, and privacy info all live here. All five themes are tuned for long sessions — no harsh white, even on the light ones.' },
     { selector:'#helpFab', title:'That\'s the tour',
-      text:'This <b>?</b> button keeps the tutorial, the full feature guide, and the FAQ. And somewhere in here, a few things are hidden — the help panel will tell you <i>that</i> they exist, but not where. 🕵️‍♀️' }
+      text:'This <b>?</b> button keeps the tutorial, the full feature guide, and the FAQ. And somewhere in here, a few things are hidden — <i>an old code from the arcade days still works, and the right word typed in the wrong box opens an archive</i>. That\'s all you get. 🕵️‍♀️' }
   ];
 
   let stepIndex = 0;
@@ -5871,8 +5904,10 @@ function renderSquad(){
   [...SQUAD_SLOTS.querySelectorAll('.slot-edit')].forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      selectPokemon(btn.dataset.id);
-      RESULT.scrollIntoView({behavior:'smooth', block:'start'});
+      // v52: THE LAST REROLL. This button called the raw search path, which
+      // rendered DEFAULT moves — the founder's "still doesn't retain" report.
+      // The edit button, of all things, was the one door left unfixed.
+      switchToSquadMon(btn.dataset.id);
     });
   });
   [...SQUAD_SLOTS.querySelectorAll('.squad-slot:not(.filled)')].forEach(slot=>{
@@ -6625,7 +6660,7 @@ function openSecretDex(){
     const seen = new Map();
     POKEMON.forEach(p => { if(p.dex && !seen.has(p.dex)) seen.set(p.dex, p.speciesName.replace(/\s*\(.*\)$/,'')); });
     const cells = [...seen.entries()].sort((a,b)=>a[0]-b[0]).map(([d,n]) =>
-      `<div class="sdex-cell" data-d="${d}" data-n="${escName(n)}"><img loading="lazy" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d}.png" alt="" onerror="this.remove()"><div>#${d} ${escName(n)}</div></div>`).join('');
+      `<div class="sdex-cell" data-d="${d}" data-n="${escName(n)}"><img loading="lazy" src="${d<=649?'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/'+d+'.gif':'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+d+'.png'}" alt="" data-static="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d}.png" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}"><div>#${d} ${escName(n)}</div></div>`).join('');
     dex.innerHTML = `<div class="sdex-head"><span class="sdex-title">🥚 THE SECRET DEX</span><button class="sdex-close" aria-label="Close">×</button></div>
       <div class="sdex-sub">${seen.size} mons · tap a face for the big artwork · you found this. — for Shadow &amp; Rouge</div>
       <div class="sdex-grid">${cells}</div><div id="sdexBig"><img id="sdexBigImg" alt=""><span id="sdexBigName"></span></div>`;
