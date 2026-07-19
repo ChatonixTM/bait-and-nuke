@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v48-2026-07-19">
+<meta name="app-version" content="v49-2026-07-19">
 <meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
 <meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
 <meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
@@ -1548,6 +1548,25 @@
   .compact-ivs #ivZone{display:none;}
   .compact-ivs #ivZoneToggle{display:block;}
   .slot-name{cursor:pointer;}
+  /* v49: THE SECRET DEX 🥚 — type the word, enter the archive. */
+  #secretDex{display:none;position:fixed;inset:0;z-index:1400;background:rgba(13,10,8,.97);
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px 14px 40px;}
+  #secretDex.show{display:block;}
+  .sdex-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  .sdex-title{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--signal);letter-spacing:.06em;}
+  .sdex-close{background:none;border:1px solid var(--signal-dim);border-radius:50%;width:34px;height:34px;
+    color:var(--text);font-size:16px;cursor:pointer;flex:0 0 auto;}
+  .sdex-sub{font-size:11.5px;color:var(--text-dim);margin-bottom:14px;}
+  .sdex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:9px;}
+  .sdex-cell{background:rgba(255,255,255,.03);border:1px solid var(--signal-dim);border-radius:10px;
+    padding:7px;text-align:center;cursor:pointer;}
+  .sdex-cell img{width:60px;height:60px;image-rendering:pixelated;}
+  .sdex-cell div{font-size:9.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #sdexBig{display:none;position:fixed;inset:0;z-index:1401;background:rgba(0,0,0,.88);
+    align-items:center;justify-content:center;flex-direction:column;gap:10px;}
+  #sdexBig.show{display:flex;}
+  #sdexBig img{width:min(80vw,420px);height:auto;}
+  #sdexBig span{color:#fff;font-family:var(--mono);font-size:14px;}
   .nm-types{margin-bottom:7px;}
   .nm-why{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--text-dim);}
   .nm-why b{color:var(--amber);}
@@ -4005,7 +4024,8 @@ function lockBodyScroll(on){
 function healBodyLock(){
   const tabsOpen = window.__bnTabs && window.__bnTabs.length > 0;
   const helpOpen = !!document.querySelector('#helpPanel.show');
-  if(!tabsOpen && !helpOpen && document.body.classList.contains('tabs-open')){
+  const dexOpen = !!document.querySelector('#secretDex.show');
+  if(!tabsOpen && !helpOpen && !dexOpen && document.body.classList.contains('tabs-open')){
     __bnLockCount = 0;
     window.__bnTabsLockHeld = false;
     document.body.classList.remove('tabs-open');
@@ -4697,7 +4717,11 @@ function backspaceSearch(){
 document.addEventListener('click', (e)=>{
   if(!e.target.closest('.search-shell')) SUGG.classList.remove('show');
 });
-SEARCH.addEventListener('input', e => search(e.target.value));
+SEARCH.addEventListener('input', e => {
+  const w = e.target.value.trim().toLowerCase();
+  if(w === 'pokedex' || w === 'dex'){ e.target.value = ''; SUGG.classList.remove('show'); openSecretDex(); return; }
+  search(e.target.value);
+});
 SEARCH.addEventListener('focus', e => e.target.select());
 SEARCH.addEventListener('keydown', e=>{
   if(e.key === 'Enter'){
@@ -6579,6 +6603,43 @@ function startRenameTeam(btn){
 }
 
 loadAccount();
+
+// v49: THE SECRET DEX 🥚 — type "pokedex" (or "dex") into search. No mon
+// matches those words, nothing in the UI hints at it. The ones who know, know.
+// Built lazily on first summon; holds the body lock politely (the watchdog
+// above was taught to respect it); tap a face for the big official artwork.
+function openSecretDex(){
+  let dex = document.getElementById('secretDex');
+  if(!dex){
+    dex = document.createElement('div');
+    dex.id = 'secretDex';
+    const seen = new Map();
+    POKEMON.forEach(p => { if(p.dex && !seen.has(p.dex)) seen.set(p.dex, p.speciesName.replace(/\s*\(.*\)$/,'')); });
+    const cells = [...seen.entries()].sort((a,b)=>a[0]-b[0]).map(([d,n]) =>
+      `<div class="sdex-cell" data-d="${d}" data-n="${escName(n)}"><img loading="lazy" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d}.png" alt="" onerror="this.remove()"><div>#${d} ${escName(n)}</div></div>`).join('');
+    dex.innerHTML = `<div class="sdex-head"><span class="sdex-title">🥚 THE SECRET DEX</span><button class="sdex-close" aria-label="Close">×</button></div>
+      <div class="sdex-sub">${seen.size} mons · tap a face for the big artwork · you found this. — for Shadow &amp; Rouge</div>
+      <div class="sdex-grid">${cells}</div><div id="sdexBig"><img id="sdexBigImg" alt=""><span id="sdexBigName"></span></div>`;
+    document.body.appendChild(dex);
+    dex.querySelector('.sdex-close').addEventListener('click', closeSecretDex);
+    dex.querySelector('.sdex-grid').addEventListener('click', (e)=>{
+      const c = e.target.closest('.sdex-cell'); if(!c) return;
+      const img = document.getElementById('sdexBigImg');
+      img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + c.dataset.d + '.png';
+      img.onerror = ()=>{ img.onerror = null; img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + c.dataset.d + '.png'; };
+      document.getElementById('sdexBigName').textContent = '#' + c.dataset.d + ' ' + c.dataset.n;
+      document.getElementById('sdexBig').classList.add('show');
+    });
+    dex.querySelector('#sdexBig').addEventListener('click', (e)=>{ e.currentTarget.classList.remove('show'); });
+  }
+  dex.classList.add('show');
+  dex.scrollTop = 0;
+  lockBodyScroll(true);
+}
+function closeSecretDex(){
+  const dex = document.getElementById('secretDex');
+  if(dex && dex.classList.contains('show')){ dex.classList.remove('show'); lockBodyScroll(false); }
+}
 
 // v48: compact-mode toggle — one tap brings the IV tools back.
 document.addEventListener('click', (e)=>{
