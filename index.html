@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v49-2026-07-19">
+<meta name="app-version" content="v50-2026-07-19">
 <meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
 <meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
 <meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
@@ -6636,6 +6636,25 @@ function openSecretDex(){
   dex.scrollTop = 0;
   lockBodyScroll(true);
 }
+// v50: THE KONAMI CODE 🕹️ — up up down down left right left right B A.
+// The founder grew up on GameCube and Atari; this one is for him. Works
+// anywhere on a keyboard (ignored while typing in a field — the search bar
+// has its own summoning word). Thirty lives, one Dex.
+(function(){
+  const CODE = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  let pos = 0;
+  document.addEventListener('keydown', (e)=>{
+    const tag = (e.target && e.target.tagName) || '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if(e.code === CODE[pos]){
+      pos++;
+      if(pos === CODE.length){ pos = 0; console.log('%c🕹️ 30 LIVES. WELCOME, PLAYER ONE.', 'color:#f80;font-weight:bold'); openSecretDex(); }
+    } else {
+      pos = (e.code === CODE[0]) ? 1 : 0;
+    }
+  });
+})();
+
 function closeSecretDex(){
   const dex = document.getElementById('secretDex');
   if(dex && dex.classList.contains('show')){ dex.classList.remove('show'); lockBodyScroll(false); }
