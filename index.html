@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v47-2026-07-19">
+<meta name="app-version" content="v48-2026-07-19">
 <meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
 <meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
 <meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
@@ -1540,6 +1540,14 @@
   .mon-head{display:flex;align-items:center;gap:10px;}
   .slot-name{display:flex;align-items:center;gap:8px;}
   .sugg-name{display:inline-flex;align-items:center;gap:8px;}
+  /* v48: compact mode — arriving via squad switch hides the IV classroom
+     behind one calm button. Search arrivals still get the full lesson. */
+  .ivzone-toggle{display:none;width:100%;padding:10px;margin:6px 0 10px;border-radius:10px;
+    border:1px dashed var(--signal-dim);background:transparent;color:var(--text-dim);
+    font-family:var(--mono);font-size:12px;cursor:pointer;}
+  .compact-ivs #ivZone{display:none;}
+  .compact-ivs #ivZoneToggle{display:block;}
+  .slot-name{cursor:pointer;}
   .nm-types{margin-bottom:7px;}
   .nm-why{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--text-dim);}
   .nm-why b{color:var(--amber);}
@@ -3539,6 +3547,7 @@ function selectPokemon(speciesId){
     ? TAUNT_MESSAGES[Math.floor(Math.random()*TAUNT_MESSAGES.length)]
     : SCAN_MESSAGES[Math.floor(Math.random()*SCAN_MESSAGES.length)];
 
+  RESULT.classList.remove('compact-ivs');
   RESULT.classList.add('show');
   RESULT.innerHTML = `<div class="scan-loading"><span class="scan-dot"></span>${msg}</div>`;
   const quickBar = document.getElementById('quickAddBar');
@@ -4207,6 +4216,16 @@ function switchToSquadMon(speciesId){
     if(nukeSel && entry.nuke) nukeSel.value = entry.nuke.moveId;
     [fastSel, baitSel, nukeSel].forEach(s => s && s.dispatchEvent(new Event('change')));
   }
+  // v48: squad arrivals get COMPACT mode — the IV classroom collapses to one
+  // button ("the jargon", per the founder). And belt-and-suspenders against
+  // the reroll he reported: after the dropdown restore settles, the saved
+  // entry object is reasserted into the squad so no init-order race can
+  // replace an edited kit with the auto-pick.
+  RESULT.classList.add('compact-ivs');
+  if(entry){
+    const i2 = squad.findIndex(s => s.speciesId === speciesId);
+    if(i2 > -1 && squad[i2] !== entry){ squad[i2] = entry; renderSquad(); }
+  }
   nudgeResultIntoView();
 }
 
@@ -4306,6 +4325,7 @@ function renderResult(mon){
       <label>Nuke (main charged move)<select id="nukeSelect">${nukeOpts}</select></label>
     </div>
 
+    <div id="ivZone">
     <div class="section-label">Your actual IVs <em style="font-style:normal;text-transform:none;letter-spacing:0;">(optional — changes real bulk below)</em></div>
     <div class="iv-preset-row">
       <button class="iv-preset-btn" id="ivRealisticBtn">🎲 Use realistic IVs (8/11/11)</button>
@@ -4345,6 +4365,8 @@ function renderResult(mon){
     <div class="cp-solve-note" id="cpSolveNote" style="font-size:0.85em;opacity:0.8;margin-top:4px;"></div>
     <div class="iv-tip tip-dismiss" data-tip="ivTip" id="ivTip"></div>
     <div id="rank1Panel"></div>
+    </div>
+    <button id="ivZoneToggle" class="ivzone-toggle">🎯 Show IV tools &amp; best spread</button>
     <div id="loadoutStats"></div>
 
     ${nightmareBoardHTML(nightmares, mon.speciesName, 'tap a nightmare to scout it — know thy enemy')}
@@ -5805,6 +5827,11 @@ function renderSquad(){
     }
   }
   SQUAD_SLOTS.innerHTML = slots.join('');
+  // v48: the founder's flow — tap a mon right in the squad builder and the
+  // detail view smart-switches to it (saved kit, compact mode, no reroll).
+  [...SQUAD_SLOTS.querySelectorAll('.squad-slot.filled .slot-name')].forEach((el, i)=>{
+    el.addEventListener('click', ()=>{ const m = squad[+el.closest('.squad-slot').dataset.index]; if(m) switchToSquadMon(m.speciesId); });
+  });
   [...SQUAD_SLOTS.querySelectorAll('.slot-remove')].forEach(btn=>{
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); removeFromSquad(btn.dataset.id); });
   });
@@ -6553,6 +6580,11 @@ function startRenameTeam(btn){
 
 loadAccount();
 
+// v48: compact-mode toggle — one tap brings the IV tools back.
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.id === 'ivZoneToggle') RESULT.classList.remove('compact-ivs');
+});
+
 // ---- v46: TAP TOOLTIPS — the review's sharpest rookie finding. Every stat
 // explanation in this app lived in title attributes, which REQUIRE A MOUSE.
 // On the device most users hold, our own explanations were unreachable.
@@ -6570,7 +6602,7 @@ loadAccount();
     // interactive ancestor" disqualified every stat inside them. The right
     // rule: only skip when the TITLED ELEMENT ITSELF is a control (the ⚡
     // analyze button keeps analyzing) or the tap landed on a form field.
-    const interactive = el && (el.matches('button, select, input, textarea, a, option, label')
+    const interactive = el && (el.matches('button, select, input, textarea, a, option, label, [role="button"]')
                         || e.target.closest('select, input, textarea, option'));
     if(!el || interactive || !el.getAttribute('title')){ dismiss(); return; }
     e.stopPropagation();           // a stat tap explains the stat — it doesn't
