@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v46-2026-07-18">
+<meta name="app-version" content="v47-2026-07-19">
 <meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
 <meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
 <meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
@@ -1533,7 +1533,13 @@
     transition:border-color .2s, transform .15s;
   }
   .nightmare-card:hover{border-color:var(--signal-dim);transform:translateY(-2px);}
-  .nm-name{font-weight:700;font-size:13px;margin-bottom:5px;}
+  .nm-name{font-weight:700;font-size:13px;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+  /* v47: sprites — pixel-crisp, decorative, self-removing when unavailable */
+  .sprite{image-rendering:pixelated;vertical-align:middle;flex:0 0 auto;}
+  .sprite-hero{width:72px;height:72px;margin-right:4px;}
+  .mon-head{display:flex;align-items:center;gap:10px;}
+  .slot-name{display:flex;align-items:center;gap:8px;}
+  .sugg-name{display:inline-flex;align-items:center;gap:8px;}
   .nm-types{margin-bottom:7px;}
   .nm-why{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--text-dim);}
   .nm-why b{color:var(--amber);}
@@ -2709,7 +2715,7 @@ try{
 
   <div class="analyze-bar" id="analyzeBar">
     <button class="analyze-btn" id="analyzeBtn" disabled>Analyze squad synergy</button>
-    <select class="league-select" id="leagueSelect">
+    <select class="league-select" id="leagueSelect" title="Great = 1500 CP cap, Ultra = 2500, Master = no cap. Most new PvP players start in Great League.">
       <option>Great League</option>
       <option>Ultra League</option>
       <option>Master League</option>
@@ -3426,7 +3432,7 @@ function renderSuggestions(matches){
   if(!matches.length){ SUGG.classList.remove('show'); return; }
   SUGG.innerHTML = matches.map((m,i)=>
     `<div class="sugg-item${i===0?' active':''}" data-id="${m.ref.speciesId}">
-       <span class="sugg-name">${m.ref.speciesName}</span>
+       <span class="sugg-name">${spriteImg(m.ref, 24, 'sprite-sugg')}${m.ref.speciesName}</span>
        <span class="sugg-dex">#${String(m.ref.dex).padStart(4,'0')}</span>
      </div>`
   ).join('');
@@ -3887,7 +3893,7 @@ function nightmareBoardHTML(nightmares, monName, hintText){
         <div class="nightmare-row">
           ${group.map(n=>`
             <button class="nightmare-card ${meta.cls}" data-id="${n.c.speciesId}">
-              <div class="nm-name">${n.c.speciesName}</div>
+              <div class="nm-name">${spriteImg(n.c, 26, 'sprite-nm')}${n.c.speciesName}</div>
               <div class="nm-types">${(n.c.types||[]).filter(x=>x&&x!=='none').map(x=>typeBadgeHtml(x)).join('')}</div>
               <div class="nm-why">
                 hits <b>${NM_MULT(n.offMult)}</b> ${n.viaType}${n.viaCoverage?' <span class="nm-cov">(cov)</span>':''}
@@ -4164,6 +4170,22 @@ function renderMinimizedPill(){
 const __origRenderTabStack = renderTabStack;
 renderTabStack = function(opts){ __origRenderTabStack(opts); renderMinimizedPill(); };
 
+// v47: SPRITES — faces for the mons. PokeAPI's sprite CDN, keyed by dex.
+// Rules: lazy-loaded, pixel-crisp, and GRACEFUL — if offline or missing
+// (rare forms), the img removes itself and the text stands alone. No broken
+// icons, ever. Sprites are decoration, not load-bearing.
+function monDex(x){
+  if(!x) return 0;
+  if(x.dex) return x.dex;
+  const p = POKEMON.find(p => p.speciesId === x.speciesId);
+  return p ? (p.dex || 0) : 0;
+}
+function spriteImg(x, size, cls){
+  const dex = monDex(x);
+  if(!dex) return '';
+  return `<img class="sprite ${cls||''}" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dex}.png" width="${size}" height="${size}" loading="lazy" alt="" onerror="this.remove()">`;
+}
+
 // v45: THE SQUAD SWITCHER — the founder's ask, verbatim: "once a mon is
 // selected, there's no way to select another mon in your squad and see the
 // worst nightmares or other stuff." Now there is: tap a squad chip in the
@@ -4235,7 +4257,7 @@ function renderResult(mon){
     <div id="researchTables" style="${isInSquad ? 'display:none;' : ''}">
     <div class="section-label">Fast moves — damage &amp; energy</div>
     <table>
-      <thead><tr><th>Move</th><th class="num">Power</th><th class="num">Turns</th><th class="num">Dmg/sec</th><th class="num">Energy/sec</th><th class="bar-cell"></th></tr></thead>
+      <thead><tr><th>Move</th><th class="num" title="Base damage before type matchups">Power</th><th class="num" title="How many turns the move takes to finish - shorter = more flexible (the Rouge rule)">Turns</th><th class="num" title="Damage dealt per second of real battle time">Dmg/sec</th><th class="num" title="Energy banked per second - fuels your charged moves">Energy/sec</th><th class="bar-cell"></th></tr></thead>
       <tbody>
         ${fastRows.map(r=>`
           <tr>
@@ -4251,7 +4273,7 @@ function renderResult(mon){
 
     <div class="section-label">Charged moves — payload</div>
     <table>
-      <thead><tr><th>Move</th><th class="num">Power</th><th class="num">Energy</th><th class="num">Dmg/Energy (DPE)</th></tr></thead>
+      <thead><tr><th>Move</th><th class="num" title="Base damage before type matchups">Power</th><th class="num" title="Energy cost to fire this move">Energy</th><th class="num" title="Damage per energy spent - the efficiency currency of PvP. Higher = more damage from the same taps">Dmg/Energy (DPE)</th></tr></thead>
       <tbody>
         ${chargedRows.map(r=>`
           <tr>
@@ -4269,6 +4291,7 @@ function renderResult(mon){
 
   RESULT.innerHTML = `
     <div class="mon-head">
+      ${spriteImg(mon, 72, 'sprite-hero')}
       <div>
         <div class="mon-name">${mon.speciesName}</div>
         <div class="mon-tags">${typeBadges}</div>
@@ -5769,7 +5792,7 @@ function renderSquad(){
       slots.push(`
         <div class="squad-slot filled" draggable="true" data-index="${i}">
           <div class="drag-handle" role="button" tabindex="0" title="Tap to move up · drag to reorder" aria-label="Move this Pokémon up in the order">⠿</div>
-          <div class="slot-name">${m.speciesName}</div>
+          <div class="slot-name">${spriteImg(m, 36, 'sprite-slot')}${m.speciesName}</div>
           <div class="slot-archetype">${archetype}</div>
           <div class="mon-tags" style="margin-bottom:8px;">${typeBadges}${roleBadgeHtml(m.role)}${bulkBadgeHtml(m.bulk, m.role)}</div>
           <div class="slot-move">${m.bait ? `${m.castsBait} taps with <b>${m.fast.name}</b> charges <b>${m.bait.name}</b> (bait)<br>` : ''}${m.casts} taps with <b>${m.fast.name}</b> charges <b>${m.charged.name}</b> (nuke)<br>Dmg/sec: ${m.cycleDps.toFixed(2)}</div>
