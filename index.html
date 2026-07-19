@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v50-2026-07-19">
+<meta name="app-version" content="v51-2026-07-19">
 <meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
 <meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
 <meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
@@ -4077,7 +4077,11 @@ function renderTabContentHTML(mon, tabId, depth){
     return `<div class="empty-state">No complete moveset data found for ${mon.speciesName}.</div>`;
   }
   const def = pickDefaultLoadout(mon, fastList, chargedList);
-  const loadout = buildLoadoutEntry(mon, def.fast, def.bait, def.nuke);
+  // v51: THE TAB REROLL, dead. If this mon is in YOUR squad, the tab shows
+  // YOUR kit — fast, bait, nuke, exactly as you set them — not the auto-pick.
+  // Founder's report verbatim: "redundant + annoying to manually re-change."
+  const squadEntry = squad.find(s => s.speciesId === mon.speciesId);
+  const loadout = squadEntry || buildLoadoutEntry(mon, def.fast, def.bait, def.nuke);
   const nightmares = findNightmares(mon);
   const typeBadges = (mon.types||[]).filter(t=>t && t!=='none').map(t=>typeBadgeHtml(t)).join('');
   const archetype = archetypeLabel(loadout.role, loadout.bulk.label);
@@ -5851,10 +5855,15 @@ function renderSquad(){
     }
   }
   SQUAD_SLOTS.innerHTML = slots.join('');
-  // v48: the founder's flow — tap a mon right in the squad builder and the
-  // detail view smart-switches to it (saved kit, compact mode, no reroll).
-  [...SQUAD_SLOTS.querySelectorAll('.squad-slot.filled .slot-name')].forEach((el, i)=>{
-    el.addEventListener('click', ()=>{ const m = squad[+el.closest('.squad-slot').dataset.index]; if(m) switchToSquadMon(m.speciesId); });
+  // v51: tap ANYWHERE on a squad card (not just the name) to smart-switch —
+  // the founder's ask, iOS included. Controls keep their own jobs: the ⠿
+  // handle reorders, edit/remove links do their thing, selects select.
+  [...SQUAD_SLOTS.querySelectorAll('.squad-slot.filled')].forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('a, button, select, input, textarea, label, [role="button"], .drag-handle, .slot-remove')) return;
+      const m = squad[+card.dataset.index];
+      if(m) switchToSquadMon(m.speciesId);
+    });
   });
   [...SQUAD_SLOTS.querySelectorAll('.slot-remove')].forEach(btn=>{
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); removeFromSquad(btn.dataset.id); });
