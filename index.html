@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Bait &amp; Nuke</title>
-<meta name="app-version" content="v44-2026-07-17">
+<meta name="app-version" content="v45-2026-07-18">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -123,6 +123,18 @@
   .ms-flash label:nth-child(3){animation-delay:0.6s;}
   @keyframes msPulse{0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 2px var(--signal), 0 0 16px rgba(var(--glow-rgb),0.5);}}
   .qa-analyze{flex:0 0 auto;padding:10px 12px;border-radius:9px;border:1px solid var(--signal-dim);background:rgba(var(--glow-rgb),0.14);color:var(--signal);font-family:var(--mono);font-weight:700;font-size:14px;cursor:pointer;line-height:1;}
+  /* v45: squad switcher chips — tap any member to view their full board. */
+  .qa-chip-rail{display:inline-flex;gap:6px;flex:0 0 auto;align-items:center;}
+  .qa-mon-chip{
+    flex:0 0 auto;padding:9px 11px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--signal-dim);background:transparent;
+    color:var(--text-dim);font-family:var(--mono);font-size:11.5px;font-weight:600;
+    line-height:1;white-space:nowrap;transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .qa-mon-chip.current{
+    background:rgba(var(--glow-rgb),0.22);color:var(--signal);
+    border-color:var(--signal);cursor:default;
+  }
   /* v39: squad just hit 3/3 — the ⚡ pulses four times to say "I'm next". */
   @keyframes qaNudge{
     0%,100%{transform:scale(1); box-shadow:0 0 0 0 rgba(var(--glow-rgb),0.55);}
@@ -4131,6 +4143,30 @@ function renderMinimizedPill(){
 const __origRenderTabStack = renderTabStack;
 renderTabStack = function(opts){ __origRenderTabStack(opts); renderMinimizedPill(); };
 
+// v45: THE SQUAD SWITCHER — the founder's ask, verbatim: "once a mon is
+// selected, there's no way to select another mon in your squad and see the
+// worst nightmares or other stuff." Now there is: tap a squad chip in the
+// Command Deck and the full detail view (nightmares, moveset, IVs, rank-1)
+// re-renders for that member — restoring the SAVED loadout from your squad,
+// not the default kit, because the board should reflect what you built.
+function switchToSquadMon(speciesId){
+  const entry = squad.find(s => s.speciesId === speciesId);
+  const mon = POKEMON.find(p => p.speciesId === speciesId);
+  if(!mon) return;
+  if(typeof SEARCH !== 'undefined' && SEARCH) SEARCH.value = mon.speciesName;
+  renderResult(mon);
+  if(entry){
+    const fastSel = document.getElementById('fastSelect');
+    const baitSel = document.getElementById('baitSelect');
+    const nukeSel = document.getElementById('nukeSelect');
+    if(fastSel && entry.fast) fastSel.value = entry.fast.moveId;
+    if(baitSel) baitSel.value = entry.bait ? entry.bait.moveId : '';
+    if(nukeSel && entry.nuke) nukeSel.value = entry.nuke.moveId;
+    [fastSel, baitSel, nukeSel].forEach(s => s && s.dispatchEvent(new Event('change')));
+  }
+  nudgeResultIntoView();
+}
+
 function renderResult(mon){
   const fastList = (mon.fastMoves||[]).map(id => MOVES[id]).filter(Boolean);
   const chargedList = (mon.chargedMoves||[]).map(id => MOVES[id]).filter(Boolean);
@@ -4492,6 +4528,9 @@ function renderQuickAddBar(mon){
   bar.innerHTML = `
     <button class="add-squad-btn${inSquad?' in-squad':''}" id="addSquadBtn">${btnLabel}</button>
     <button class="qa-analyze${becameFull?' qa-nudge':''}" id="qaAnalyzeBtn" title="Analyze squad synergy" aria-label="Analyze squad synergy" ${squad.length < 2 ? 'disabled' : ''}>⚡</button>
+    ${squad.length ? `<span class="qa-chip-rail" role="group" aria-label="View a squad member">${squad.map(s =>
+      `<button class="qa-mon-chip${s.speciesId === mon.speciesId ? ' current' : ''}" data-sid="${s.speciesId}" title="View ${s.speciesName}">${s.speciesName}</button>`
+    ).join('')}</span>` : ''}
     <select class="league-select league-select-mini" id="qaLeagueSelect" aria-label="League">
       ${['Great League','Ultra League','Master League'].map(l=>`<option ${l===currentLeague?'selected':''}>${l}</option>`).join('')}
     </select>
@@ -4548,6 +4587,9 @@ function renderQuickAddBar(mon){
       if(ab && !ab.disabled) ab.click();
     });
   }
+  [...bar.querySelectorAll('.qa-mon-chip')].forEach(chip=>{
+    chip.addEventListener('click', ()=> switchToSquadMon(chip.dataset.sid));
+  });
   document.getElementById('addSquadBtn').addEventListener('click', ()=>{
     if(!squad.some(s => s.speciesId === mon.speciesId) && squad.length >= 3){
       const sp = document.getElementById('squadPanel');
