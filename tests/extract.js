@@ -2,6 +2,12 @@
 const fs = require('fs');
 const acorn = require('acorn');
 function getScript(){
+  // v53: post-monolith-split. The app's brain lives in app.js; inline
+  // snippets in index.html are boot glue only. Falls back to parsing the
+  // HTML if app.js is absent (pre-split builds).
+  const path = require('path');
+  const appJs = require('path').join(__dirname,'..','app.js');
+  if(fs.existsSync(appJs)) return fs.readFileSync(appJs, 'utf8');
   const html = fs.readFileSync(require('path').join(__dirname,'..','index.html'), 'utf8');
   return [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n;\n');
 }

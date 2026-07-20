@@ -1,0 +1,37 @@
+const { chromium } = require('playwright');
+
+(async () => {
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true})).newPage();
+  let pass=0, fail=0;
+  const t=(n,c,x)=>{c?pass++:fail++;console.log((c?'✅':'❌ FAIL'),n,x?'— '+x:'');};
+  const server = await require(require('path').join(__dirname,'serve.js'))(require('path').join(__dirname,'..'), 8775);
+  await page.goto('http://localhost:8775/index.html');
+  await page.waitForFunction(()=>typeof POKEMON!=='undefined'&&POKEMON.length>1000,null,{timeout:15000});
+  await page.evaluate(()=>{ SEARCH.value='pokedex'; SEARCH.dispatchEvent(new Event('input')); });
+  await page.waitForTimeout(400);
+  t('typing the word summons the Dex', await page.evaluate(()=>document.getElementById('secretDex')?.classList.contains('show')));
+  t('search bar cleared (secret stays secret)', await page.evaluate(()=>SEARCH.value===''));
+  t('grid holds all 946', await page.evaluate(()=>document.querySelectorAll('.sdex-cell').length===946));
+  t('body locked while browsing', await page.evaluate(()=>document.body.classList.contains('tabs-open')));
+  await page.evaluate(()=>{ document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus')); });
+  t('watchdog respects the open Dex', await page.evaluate(()=>document.body.classList.contains('tabs-open') && document.getElementById('secretDex').classList.contains('show')));
+  await page.waitForTimeout(1500);
+  t('sprites loading inside', await page.evaluate(()=>[...document.querySelectorAll('.sdex-cell img')].slice(0,20).some(i=>i.naturalWidth>0)));
+  await page.evaluate(()=>{ document.querySelector('.sdex-cell[data-d="184"]').click(); });
+  await page.waitForTimeout(1200);
+  t('tap face → big artwork overlay', await page.evaluate(()=>document.getElementById('sdexBig').classList.contains('show') && document.getElementById('sdexBigName').textContent.includes('Azumarill')));
+  await page.evaluate(()=>document.getElementById('sdexBig').click());
+  await page.evaluate(()=>document.querySelector('.sdex-close').click());
+  await page.waitForTimeout(200);
+  t('close → Dex gone, body unlocked', await page.evaluate(()=>!document.getElementById('secretDex').classList.contains('show') && !document.body.classList.contains('tabs-open')));
+  await page.evaluate(()=>{ SEARCH.value='dex'; SEARCH.dispatchEvent(new Event('input')); });
+  await page.waitForTimeout(200);
+  t('short word "dex" also summons', await page.evaluate(()=>document.getElementById('secretDex').classList.contains('show')));
+  await page.evaluate(()=>closeSecretDex());
+  await page.evaluate(()=>{ SEARCH.value='azu'; SEARCH.dispatchEvent(new Event('input')); });
+  await page.waitForTimeout(300);
+  t('normal search unaffected', await page.evaluate(()=>!document.getElementById('secretDex').classList.contains('show') && SUGG.classList.contains('show')));
+  console.log(); console.log(pass+'/'+(pass+fail)+' PASSED');
+  server.close(); await browser.close(); process.exit(fail?1:0);
+})();
