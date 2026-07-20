@@ -2572,3 +2572,10 @@
     transform: scale(0.95);
   }
   .search-box:focus-within{transform:none;}
+
+/* v54: tour liveliness */
+.tour-pulse{animation:qaNudge 0.9s ease-in-out 2;}
+
+/* v54: tour act motion */
+@keyframes tourPulse{0%,100%{transform:none;box-shadow:none;}50%{transform:translateY(-4px) scale(1.02);box-shadow:0 10px 26px rgba(0,0,0,.35);}}
+.tour-pulse{animation:tourPulse 0.9s ease-in-out 2;}

@@ -1887,17 +1887,25 @@ function loadData(){
     { selector:'#cupBanner', title:'Now in GBL',
       text:'Shows whichever cup is live right now in Pokémon GO. Click the cup name to filter search down to only the Pokémon that qualify for it.' },
     { selector:'.squad-slot:not(.filled), .squad-slots', title:'Build your squad',
-      text:'Tap an empty slot (or search then hit "Add to squad") to fill it — up to 3 Pokémon per team.' },
-    { selector:'#quickAddBar, .search-shell', title:'The Command Deck',
-      text:'This bar follows you down the page. It <b>scrolls sideways</b> — swipe it. Add · ⚡ Analyze · League · Clear squad all live here. A <b>›</b> appears when there\'s more to reach.' },
+      text:'Up to 3 Pokémon per team. We\'ve seated a <b>demo squad</b> — Azumarill, Medicham, Skarmory — so you can see everything alive during the tour. It clears itself when the tour ends; your real squad is untouched.' },
+    { selector:'#quickAddBar, .search-shell', title:'The Command Deck', act: actGlideDeck,
+      text:'Your always-on toolbar — add to squad, ⚡ analyze, league picker, and chips for each squadmate. It <b>slides sideways</b> — watch it glide right now. On a phone, swipe it; on desktop, scroll it. <b>It slides sideways</b> — watch it glide just now; drag (or mouse-wheel) to reach everything on it.',
+      act(){ const bar=document.getElementById('quickAddBar'); if(!bar) return;
+        setTimeout(()=>bar.scrollTo({left:160,behavior:'smooth'}), 350);
+        setTimeout(()=>bar.scrollTo({left:0,behavior:'smooth'}), 1350); },
+      },
     { selector:'#quickAddBar, .search-shell', title:'⚡ Analyze synergy',
       text:'Unlocks at 2+ Pokémon. It reads your squad against <b>this league\'s</b> own power scale — Master League never gets judged by Great League\'s rules.' },
-    { selector:'#result, .main-content', title:'👆 Tap any number',
+    { selector:'#result, .main-content', title:'👆 Tap any number', act: actTapTipDemo,
       text:'Every stat explains itself — tap <b>⚡</b>, <b>💥</b>, <b>⏱</b>, or any table header and a plain-English bubble tells you exactly what it means. No jargon left behind.' },
-    { selector:'.squad-slots, #quickAddBar', title:'🔁 Jump between your mons',
+    { selector:'.squad-slots, #quickAddBar', title:'🔁 Jump between your mons', act: ()=>actPulse('.squad-slot.filled'),
       text:'Once your squad has members, tap <b>any squad card</b> (or its chip in the Command Deck) to switch the whole view to that Pokémon — <b>your</b> moves, <b>your</b> kit, never rerolled. The IV tools tuck away behind one 🎯 button.' },
-    { selector:'#result, .main-content', title:'😱 Worst Nightmares — in tiers',
-      text:'Search a mon and scroll to its threat board. <b>💀 Tier 1</b> hard-counters you (type advantage + fast shield pressure). <b>🪨 Tier 2</b> grinds you out — <i>no type advantage needed</i>. <b>🎲 Tier 3</b> looks scary but has no engine behind it.' },
+    { selector:'#result, .main-content', title:'😱 Worst Nightmares — in tiers', act: ()=>actPulse('.nightmare-card'),
+      text:'Search a mon and scroll to its threat board. <b>💀 Tier 1</b> hard-counters you (type advantage + fast shield pressure). <b>🪨 Tier 2</b> grinds you out — <i>no type advantage needed</i>. <b>🎲 Tier 3</b> looks scary but has no engine behind it.' ,
+      act(){ const c=document.querySelector('.nightmare-card'); if(!c) return;
+        c.classList.remove('tour-pulse'); void c.offsetWidth; c.classList.add('tour-pulse');
+        setTimeout(()=>c.classList.remove('tour-pulse'), 2200); },
+      },
     { selector:'#result, .main-content', title:'🗂 Tap a nightmare — it stacks',
       text:'Opening a threat gives it its own <b>tab over your work</b> — your squad stays exactly where it was. <b>←</b> minimizes, <b>×</b> closes, and <b>Esc</b> always backs you out. No more losing progress to curiosity.' },
     { selector:'#result, .main-content', title:'🧬 IVs are optional',
@@ -2009,6 +2017,9 @@ function loadData(){
       document.getElementById('tourNext').addEventListener('click', nextStep);
       const backBtn = document.getElementById('tourBack');
       if(backBtn && stepIndex > 0) backBtn.addEventListener('click', prevStep);
+      // v54: liveliness — steps may carry an act() that performs a little
+      // demonstration once the spotlight has settled (deck glide, card pulse).
+      if(step.act){ try{ step.act(); }catch(e){} }
     }
   }
 
@@ -2074,9 +2085,72 @@ function loadData(){
   document.addEventListener('wheel', blockScroll, {passive:false});
   document.addEventListener('keydown', blockKeys);
 
+  // v54: STEAK FOR THE STUDENTS 🥩 — the founder's spec. A tour that points
+  // at empty shelves teaches nothing, so if the user has no squad and no
+  // result open, we seat a DEMO squad (Azumarill / Medicham / Skarmory — GL
+  // royalty) and open Azumarill's page, so every step shows live content:
+  // real nightmares, real chips, a real deck. The demo NEVER touches the
+  // user's saved squad (persistence is gated off for its whole life) and it
+  // vanishes when the tour ends, restoring exactly what was there before.
+  // v54 acts: tiny performances after the spotlight settles. Each is safe to
+  // fail silently and never mutates state — pure motion, pure pedagogy.
+  function actGlideDeck(){
+    const bar = document.getElementById('quickAddBar');
+    if(!bar || bar.scrollWidth <= bar.clientWidth + 8) return;
+    const max = Math.min(160, bar.scrollWidth - bar.clientWidth);
+    bar.scrollTo({left: max, behavior:'smooth'});
+    setTimeout(()=> bar.scrollTo({left: 0, behavior:'smooth'}), 750);
+  }
+  function actPulse(sel){
+    const el = document.querySelector(sel);
+    if(!el) return;
+    el.classList.add('tour-pulse');
+    setTimeout(()=> el.classList.remove('tour-pulse'), 1900);
+  }
+  function actTapTipDemo(){
+    const stat = document.querySelector('.nightmare-card [title]');
+    if(!stat) return;
+    const tip = document.createElement('div');
+    tip.className = 'tap-tip';
+    tip.textContent = stat.getAttribute('title');
+    document.body.appendChild(tip);
+    const r = stat.getBoundingClientRect();
+    tip.style.maxWidth = Math.min(280, window.innerWidth - 24) + 'px';
+    let top = r.top - tip.offsetHeight - 10; if(top < 8) top = r.bottom + 10;
+    tip.style.top = (top + window.scrollY) + 'px';
+    tip.style.left = Math.max(12, Math.min(r.left, window.innerWidth - tip.offsetWidth - 12)) + 'px';
+    setTimeout(()=> tip.remove(), 2600);
+  }
+  let __demoActive = false, __demoPrevSquad = null, __demoPrevHyd = null;
+  function tourDemoOn(){
+    if(squad.length || currentMonBest) return;   // user brought their own steak
+    try{
+      const mk = id => { const m = POKEMON.find(p=>p.speciesId===id); if(!m) return null;
+        const fl=m.fastMoves.map(i=>MOVES[i]).filter(Boolean), cl=m.chargedMoves.map(i=>MOVES[i]).filter(Boolean);
+        const d=pickDefaultLoadout(m,fl,cl); return buildLoadoutEntry(m,d.fast,d.bait,d.nuke,null); };
+      const demo = ['azumarill','medicham','skarmory'].map(mk).filter(Boolean);
+      if(demo.length < 3) return;
+      __demoPrevSquad = squad; __demoPrevHyd = window.__bnSquadHydrated;
+      window.__bnSquadHydrated = false;          // demo must NEVER hit storage
+      squad = demo; __demoActive = true;
+      renderSquad();
+      SEARCH.value = 'Azumarill';
+      renderResult(POKEMON.find(p=>p.speciesId==='azumarill'));
+    }catch(e){}
+  }
+  function tourDemoOff(){
+    if(!__demoActive) return;
+    __demoActive = false;
+    squad = __demoPrevSquad || [];
+    window.__bnSquadHydrated = __demoPrevHyd;
+    renderSquad();                                // restores + persists the ORIGINAL
+    if(window.__bnLastQuickMon) renderQuickAddBar(window.__bnLastQuickMon);
+  }
+
   function startTour(){
     stepIndex = 0; tourDir = 1;
     touring = true;
+    tourDemoOn();
     document.body.classList.add('touring');
     const blk = document.getElementById('tourBlocker');
     if(blk) blk.classList.add('show');
@@ -2087,6 +2161,7 @@ function loadData(){
 
   function endTour(){
     if(__settleT){ clearInterval(__settleT); __settleT = null; }  // no ghost repaint after Done
+    tourDemoOff();
     touring = false;
     curTourEl = null;
     document.body.classList.remove('touring');
