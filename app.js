@@ -1900,7 +1900,7 @@ function loadData(){
         setTimeout(()=>bar.scrollTo({left:160,behavior:'smooth'}), 350);
         setTimeout(()=>bar.scrollTo({left:0,behavior:'smooth'}), 1350); },
       },
-    { selector:'#quickAddBar, .search-shell', title:'⚡ Analyze synergy',
+    { selector:'#quickAddBar, .search-shell', title:'⚡ Analyze synergy', act: actGlideDeck,
       text:'Unlocks at 2+ Pokémon. It reads your squad against <b>this league\'s</b> own power scale — Master League never gets judged by Great League\'s rules.' },
     { selector:'.nightmare-card, #result', title:'👆 Tap any number', act: actTapTipDemo,
       text:'Every stat explains itself — tap <b>⚡</b>, <b>💥</b>, <b>⏱</b>, or any table header and a plain-English bubble tells you exactly what it means. No jargon left behind.' },
