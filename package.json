@@ -2,10 +2,7 @@
   "name": "bait-and-nuke-tests",
   "private": true,
   "scripts": {
-    "test": "node tests/walkthrough.js && node tests/locktest.js && node tests/pulltest.js && node tests/jumptest.js && node tests/switchtest.js && node tests/cuptiptest.js"
+    "test": "node tests/walkthrough.js && node tests/locktest.js && node tests/pulltest.js && node tests/jumptest.js && node tests/switchtest.js && node tests/cuptiptest.js && node tests/spritetest.js && node tests/v48test.js && node tests/dextest.js && node tests/konamitest.js && node tests/v51test.js && node tests/v52test.js"
   },
-  "devDependencies": {
-    "acorn": "^8.11.0",
-    "playwright": "^1.45.0"
-  }
+  "devDependencies": { "acorn": "^8.11.0", "playwright": "^1.45.0" }
 }
