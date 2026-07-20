@@ -2,7 +2,8 @@
   "name": "bait-and-nuke-tests",
   "private": true,
   "scripts": {
-    "test": "node tests/walkthrough.js && node tests/tourtest.js && node tests/zoomproof.js && node tests/xssguard.js && node tests/locktest.js && node tests/pulltest.js && node tests/jumptest.js && node tests/switchtest.js && node tests/cuptiptest.js && node tests/spritetest.js && node tests/v48test.js && node tests/dextest.js && node tests/konamitest.js && node tests/v51test.js && node tests/v52test.js && node tests/leaguetest.js && node tests/metatest.js"
+    "test": "node tests/walkthrough.js && node tests/tourtest.js && node tests/zoomproof.js && node tests/xssguard.js && node tests/locktest.js && node tests/pulltest.js && node tests/jumptest.js && node tests/switchtest.js && node tests/cuptiptest.js && node tests/spritetest.js && node tests/v48test.js && node tests/dextest.js && node tests/konamitest.js && node tests/v51test.js && node tests/v52test.js && node tests/leaguetest.js && node tests/metatest.js && node tests/flagtest.js",
+    "refresh-meta": "node tests/refresh_meta.js gamemaster.json"
   },
   "devDependencies": { "acorn": "^8.11.0", "playwright": "^1.45.0" }
 }
