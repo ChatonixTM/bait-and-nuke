@@ -18,6 +18,22 @@ const { chromium } = require('playwright');
     await ctx.close();
   }
 
+  // v63: past the end of the encoded schedule, the banner must admit it
+  //      rather than showing a dead cup as if it were live.
+  for(const [when, expectStale] of [['2026-08-03T12:00:00Z', false], ['2026-08-20T12:00:00Z', true]]){
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.addInitScript(`{const t=${Date.parse(when)};Date.now=()=>t;}`);
+    await page.goto('http://localhost:8771/index.html');
+    await page.waitForFunction(()=>typeof CUPS!=='undefined');
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(()=>({stale: !!window.__bnCupScheduleStale,
+      banner: document.querySelector('.cup-banner-text')?.textContent||''}));
+    t(`clock ${when.slice(0,10)} → schedule stale=${expectStale}`, r.stale===expectStale, r.banner.slice(0,60));
+    if(expectStale) t('stale banner warns the user', /out of date/.test(r.banner), r.banner.slice(0,60));
+    await ctx.close();
+  }
+
   // --- Tap tooltips on touch ---
   const ctx = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const page = await ctx.newPage();
