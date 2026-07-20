@@ -1321,7 +1321,13 @@ function spriteImg(x, size, cls){
   // static PNG, and if even that fails, vanish gracefully. Same CDN, same
   // offline manners.
   const staticSrc = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dex}.png`;
-  const animSrc = dex <= 649 ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${dex}.gif` : staticSrc;
+  // v55: modern mons (dex > 649) get Pokémon Showdown's animated set — the
+  // archive PokeAPI never had. Slug from the base species name; any miss
+  // (regional forms, outages, offline) falls to the static PNG, then vanishes.
+  const slug = String((x && x.speciesName) || '').toLowerCase().replace(/\s*\(.*\)$/,'').replace(/[^a-z0-9]/g,'');
+  const animSrc = dex <= 649
+    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${dex}.gif`
+    : (slug ? `https://play.pokemonshowdown.com/sprites/ani/${slug}.gif` : staticSrc);
   return `<img class="sprite ${cls||''}" src="${animSrc}" width="${size}" height="${size}" loading="lazy" alt="" data-static="${staticSrc}" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}">`;
 }
 
@@ -1889,7 +1895,7 @@ function loadData(){
     { selector:'.squad-slot:not(.filled), .squad-slots', title:'Build your squad',
       text:'Up to 3 Pokémon per team. We\'ve seated a <b>demo squad</b> — Azumarill, Medicham, Skarmory — so you can see everything alive during the tour. It clears itself when the tour ends; your real squad is untouched.' },
     { selector:'#quickAddBar, .search-shell', title:'The Command Deck', act: actGlideDeck,
-      text:'Your always-on toolbar — add to squad, ⚡ analyze, league picker, and chips for each squadmate. It <b>slides sideways</b> — watch it glide right now. On a phone, swipe it; on desktop, scroll it. <b>It slides sideways</b> — watch it glide just now; drag (or mouse-wheel) to reach everything on it.',
+      text:'Your always-on toolbar — add to squad, ⚡ analyze, league picker, and chips for each squadmate. It <b>slides sideways</b> — watch it glide right now. On a phone, swipe it; on desktop, scroll it.',
       act(){ const bar=document.getElementById('quickAddBar'); if(!bar) return;
         setTimeout(()=>bar.scrollTo({left:160,behavior:'smooth'}), 350);
         setTimeout(()=>bar.scrollTo({left:0,behavior:'smooth'}), 1350); },
@@ -1947,9 +1953,16 @@ function loadData(){
     const isFixed = getComputedStyle(el).position === 'fixed';
     const z = isFixed ? 1 : rectScale();
     const r0 = el.getBoundingClientRect();
-    const r = { top:r0.top/z, left:r0.left/z, width:r0.width/z, height:r0.height/z, bottom:r0.bottom/z };
-    const vw = window.innerWidth / z;
-    const vh = window.innerHeight / z;
+    // v55: iOS Safari's collapsing toolbar splits the world in two — element
+    // rects report VISUAL-viewport coords while position:fixed (the spotlight)
+    // lives in the LAYOUT viewport. The delta is visualViewport.offset*, and
+    // ignoring it made every highlight sit "slightly too high" (or wildly off
+    // for the fixed tab bar). The founder's screenshots were the proof.
+    const vv = window.visualViewport;
+    const oy = vv ? vv.offsetTop : 0, ox = vv ? vv.offsetLeft : 0;
+    const r = { top:(r0.top+oy)/z, left:(r0.left+ox)/z, width:r0.width/z, height:r0.height/z, bottom:(r0.bottom+oy)/z };
+    const vw = (vv ? vv.width + ox : window.innerWidth) / z;
+    const vh = (vv ? vv.height + oy : window.innerHeight) / z;
     const pad = 8;
     SPOTLIGHT.style.top = (r.top - pad) + 'px';
     SPOTLIGHT.style.left = (r.left - pad) + 'px';
