@@ -1938,39 +1938,16 @@ function loadData(){
   // Engines disagree on whether getBoundingClientRect returns zoomed or
   // unzoomed coordinates under CSS zoom (Chromium scales, iOS WebKit doesn't).
   // So we measure instead of assume: a 100px fixed probe tells us the truth.
-  // v57: THE ANCHOR. Three failed cures taught the lesson: never MODEL the
-  // engine, ask it. We ship `zoom:1.05` on body for mobile snug-fit, and
-  // Chromium scales getBoundingClientRect under zoom while iOS WebKit does
-  // not. Every prior fix tried to compute the difference (a probe that lived
-  // INSIDE the zoom and so could never see it; then visualViewport offsets
-  // stacked on top). Both made it worse, and the founder field-tested both.
-  //
-  // The cure is to stop computing: park the spotlight and caption INSIDE a
-  // fixed, unzoomed anchor element, and position them from a rect measured
-  // in that same anchor's space. Whatever the engine does to coordinates, it
-  // does to BOTH sides of the subtraction — so the difference is always
-  // right. No probes, no offsets, no engine detection.
-  let __anchor = null;
-  function tourAnchor(){
-    if(__anchor && __anchor.isConnected) return __anchor;
-    __anchor = document.createElement('div');
-    __anchor.id = 'tourAnchor';
-    __anchor.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;zoom:1;pointer-events:none;z-index:900;';
-    document.documentElement.appendChild(__anchor);   // OUTSIDE body: no zoom
-    __anchor.appendChild(SPOTLIGHT);
-    __anchor.appendChild(CAPTION);
-    return __anchor;
-  }
-
+  // v58: With `zoom:1.05` deleted from body, getBoundingClientRect returns
+  // identical coordinates on every engine. The spotlight and caption are
+  // position:fixed, so target rects need no translation at all — read the
+  // rect, subtract the padding, done. The v53-v57 machinery (zoom probe,
+  // visualViewport offsets, unzoomed anchor element) existed only to work
+  // around the zoom and is gone with it.
   function positionOn(el){
-    const anchor = tourAnchor();
-    const a = anchor.getBoundingClientRect();          // the anchor's origin
-    const t = el.getBoundingClientRect();              // target, same space
-    const r = { top: t.top - a.top, left: t.left - a.left,
-                width: t.width, height: t.height, bottom: t.bottom - a.top };
-    // Viewport dims expressed in the anchor's space too — same subtraction.
-    const vw = document.documentElement.clientWidth - a.left;
-    const vh = document.documentElement.clientHeight - a.top;
+    const r = el.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
     const pad = 8;
     SPOTLIGHT.style.top = (r.top - pad) + 'px';
     SPOTLIGHT.style.left = (r.left - pad) + 'px';
@@ -2170,8 +2147,6 @@ function loadData(){
   function startTour(){
     stepIndex = 0; tourDir = 1;
     touring = true;
-    tourAnchor();          // v57: adopt spotlight+caption BEFORE first render,
-                           // so the caption's buttons exist in the live tree.
     tourDemoOn();
     document.body.classList.add('touring');
     const blk = document.getElementById('tourBlocker');
@@ -2267,11 +2242,8 @@ function loadData(){
   function update(){
     ticking = false;
     const brandGone = brand.getBoundingClientRect().bottom <= 0;
-    let z = 1;
-    const probe = document.getElementById('__zoomProbe');
-    if(probe) z = probe.getBoundingClientRect().width / 100 || 1;
-    else { z = parseFloat(getComputedStyle(document.body).zoom) || 1; }
-    const stickyTop = (parseFloat(getComputedStyle(shell).top) || 0) * z;
+    // v58: no body zoom anymore, so no scale factor is needed here either.
+    const stickyTop = parseFloat(getComputedStyle(shell).top) || 0;
     const stuck = shell.getBoundingClientRect().top <= stickyTop + 2;
     bar.classList.toggle('show', brandGone);
     shell.classList.toggle('stuck', stuck);
