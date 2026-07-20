@@ -855,6 +855,11 @@ function findNightmares(mon, limit){
     return A*D*H*cpm*cpm*cpm/1000;
   }
   const P_REF = CAP === 1500 ? 2600 : CAP === 2500 ? 5200 : 7800;
+  // v61: real meta relevance (Rouge's second catch — "who's ACTUALLY running
+  // these?"). PvPoke's overall rankings for this exact league. A mon absent
+  // from the list is one PvPoke doesn't consider viable here at all.
+  const META_KEY = CAP === 1500 ? '1500' : CAP === 2500 ? '2500' : '10000';
+  const META = META_SCORES[META_KEY] || null;
 
   function loadoutOf(m){
     if(NM_LOADOUTS.has(m.speciesId)) return NM_LOADOUTS.get(m.speciesId);
@@ -914,10 +919,40 @@ function findNightmares(mon, limit){
     const bulkW    = 0.5 + bulk / P_REF;
     const bulkEdge = bulk / Math.max(1, myBulk);
 
+    // v60: LEAGUE VIABILITY (Rouge's catch). A Pokemon that must be crushed
+    // far below its natural level to fit a CP cap is not a real threat there.
+    // Mewtwo CAN be built to 1500 CP, but at cpm 0.47 its stat product is
+    // 1503 against Azumarill's 2302 — 35% weaker — and nobody runs it. The
+    // engine previously scored only type matchup and bulk-at-cap, so raw
+    // legendaries ranked Tier 1 in Great League. viability compares each
+    // candidate's capped stat product to the league's meta baseline and
+    // damps anything that lands far below it. Uncapped (Master) = no damping.
+    // v61: viability now comes from PvPoke's actual rankings instead of my
+    // stat-product proxy. Their scores run ~11-96; a score of 80 is a solid
+    // meta pick, 70 is fringe, below 60 is rarely seen. Unranked means they
+    // don't list it in this league at all -> heavily damped, never Tier 1.
+    // The v60 stat-product curve is kept ONLY as a fallback for mons missing
+    // from the rankings file (e.g. brand-new releases not yet rated).
+    let viability = 1;
+    if(CAP || META){
+      if(META){
+        const score = META[c.speciesId];
+        if(score === undefined){
+          viability = 0.20;                       // PvPoke doesn't rank it here
+        } else {
+          // 60 -> 0.35, 75 -> 0.66, 85 -> 0.87, 95+ -> 1.00
+          viability = Math.min(1, Math.max(0.20, (score - 50) / 45));
+        }
+      } else if(CAP){
+        viability = Math.min(1, Math.max(0.15, Math.pow((bulk / P_REF) / 0.85, 2.5)));
+      }
+    }
+
     const threat = typeRatio
                  * (0.55 + 0.45 * Math.min(2.2, sp.idx))
                  * (0.70 + 0.30 * Math.min(2.0, theirDPE / 1.35))
-                 * bulkW;
+                 * bulkW
+                 * viability;
 
     const hasTypeAdv  = their.best >= 1.7;
     const hasPressure = sp.idx >= 1.0;
@@ -931,8 +966,12 @@ function findNightmares(mon, limit){
     const attrition = bulkEdge * Math.min(2.4, typeRatio);
     const grinds = attrition >= 1.35 && theirDPE >= 1.15 && typeRatio >= 1.10;
 
+    // v61: a hard counter must be something you would actually FACE. With real
+    // rankings this means roughly PvPoke score >= 73 for Tier 1 consideration.
+    const leagueViable = viability >= 0.50;
+
     let tier;
-    if(hasTypeAdv && hasPressure) tier = 1;
+    if(hasTypeAdv && hasPressure && leagueViable) tier = 1;
     else if(grinds)               tier = 2;
     else if(hasTypeAdv)           tier = 3;
     else                          return;
@@ -1865,7 +1904,7 @@ SEARCH.addEventListener('keydown', e=>{
 //
 // Now it's fetched once and cached hard by the browser (see _headers). No build
 // step — the app is still plain files you drag into Netlify, just more than one.
-let POKEMON_DATA = [], MOVES_DATA = {}, TYPE_CHART = {};
+let POKEMON_DATA = [], MOVES_DATA = {}, TYPE_CHART = {}, META_SCORES = {};
 
 async function loadGameData(){
   const res = await fetch('gamemaster.json');
@@ -1874,6 +1913,10 @@ async function loadGameData(){
   POKEMON_DATA = gm.pokemon;
   MOVES_DATA   = gm.moves;
   TYPE_CHART   = gm.typeChart;
+  // v61: PvPoke overall rankings, merged into gamemaster.json. Maps
+  // speciesId -> meta score (0-100) per CP cap. Absent = PvPoke does not
+  // rank it in that league, which is itself the strongest signal.
+  META_SCORES  = gm.metaScores || {};
 }
 
 
