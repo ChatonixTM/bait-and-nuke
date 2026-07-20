@@ -2902,6 +2902,23 @@ const CUPS = [
   { name: 'Master Premier week (GL · Master Premier)', league: 'Great League', cpCap: 1500,
     types: ALL_TYPES, window: 'Jul 28 – Aug 4, 2026 · 4× Stardust', emoji: '🏟️',
     startISO: '2026-07-28T20:00:00Z', endISO: '2026-08-04T20:00:00Z', noTypeCup: true },
+  // v64: rest of Season 27 encoded from Niantic's official schedule.
+  { name: 'Weather Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['fire','water','ice','rock'], window: 'Aug 4 – Aug 11, 2026', emoji: '🌦️',
+    startISO: '2026-08-04T20:00:00Z', endISO: '2026-08-11T20:00:00Z' },
+  { name: 'Evolution Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Aug 11 – Aug 18, 2026 · 4× Stardust', emoji: '🧬',
+    startISO: '2026-08-11T20:00:00Z', endISO: '2026-08-18T20:00:00Z', noTypeCup: true,
+    note: 'Only Pokémon that have evolved once and can evolve again are eligible — this filter is type-based, so it cannot enforce that rule.' },
+  { name: 'Scroll Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['water','fighting','dark'], window: 'Aug 18 – Aug 25, 2026', emoji: '📜',
+    startISO: '2026-08-18T20:00:00Z', endISO: '2026-08-25T20:00:00Z' },
+  { name: 'All Standard Leagues week (GL · UL · ML)', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Aug 25 – Sep 1, 2026 · 4× Stardust', emoji: '⚔️',
+    startISO: '2026-08-25T20:00:00Z', endISO: '2026-09-01T20:00:00Z', noTypeCup: true },
+  { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Sep 1 – Sep 8, 2026 · 4× Stardust', emoji: '💠',
+    startISO: '2026-09-01T20:00:00Z', endISO: '2026-09-08T20:00:00Z', noTypeCup: true },
   { name: 'Fantasy Cup: Ultra League Edition', league: 'Ultra League', cpCap: 2500,
     types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
@@ -2917,7 +2934,7 @@ const CUPS = [
 // v63: the encoded schedule has an end date. Once the clock passes it we are
 // guessing, so the app says so instead of quietly showing a dead cup. Extend
 // CUPS with the next season's startISO/endISO values to clear the warning.
-const CUP_SCHEDULE_END = '2026-08-04T20:00:00Z';
+const CUP_SCHEDULE_END = '2026-09-08T20:00:00Z';  // end of Season 27
 (function(){
   const now = Date.now();
   let liveIdx = -1, lastEnded = -1, lastEndT = -Infinity;
