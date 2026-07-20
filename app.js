@@ -1789,8 +1789,44 @@ function renderQuickAddBar(mon){
     ${squad.length ? `<button class="qa-clear" id="qaClearBtn" title="Clear squad">Clear squad</button>` : ''}`;
   bar.classList.add('show');
 
+  // v65: THE ROCKET LEAGUE RULE — the next action must be ON SCREEN, not just
+  // present. The deck scrolls sideways, so a glowing button can glow off the
+  // edge where nobody sees it. After each state change we slide the deck to
+  // whatever you should press next: the Add button when a mon is picked, the
+  // ⚡ when the squad hits three. Only scrolls if the target is actually out
+  // of view, and never fights a scroll you are performing yourself.
+  requestAnimationFrame(()=>{
+    if(bar.__bnUserScrolling) return;
+    const target = becameFull
+      ? bar.querySelector('#qaAnalyzeBtn')
+      : (!inSquad && !squadFull ? bar.querySelector('#addSquadBtn') : null);
+    if(!target) return;
+    const barBox = bar.getBoundingClientRect();
+    const tBox = target.getBoundingClientRect();
+    const hiddenLeft  = tBox.left  < barBox.left  + 4;
+    const hiddenRight = tBox.right > barBox.right - 4;
+    if(!hiddenLeft && !hiddenRight) return;          // already visible, leave it
+    const delta = hiddenRight ? (tBox.right - barBox.right + 16)
+                              : (tBox.left - barBox.left - 16);
+    bar.scrollTo({ left: bar.scrollLeft + delta, behavior: 'smooth' });
+  });
+
   // Show the chevron only when content ACTUALLY overflows, and retract it once
   // you've reached the right edge — an affordance that lies is worse than none.
+  // v65: user intent wins. If you are swiping the deck yourself, the
+  // auto-reveal stands down for a moment rather than yanking it away.
+  if(!bar.__bnScrollGuard){
+    bar.__bnScrollGuard = true;
+    const hold = ()=>{
+      bar.__bnUserScrolling = true;
+      clearTimeout(bar.__bnScrollTimer);
+      bar.__bnScrollTimer = setTimeout(()=>{ bar.__bnUserScrolling = false; }, 900);
+    };
+    bar.addEventListener('touchstart', hold, {passive:true});
+    bar.addEventListener('wheel', hold, {passive:true});
+    bar.addEventListener('pointerdown', hold, {passive:true});
+  }
+
   const deckWrap = document.getElementById('deckWrap');
   function syncDeckAffordance(){
     if(!deckWrap) return;
