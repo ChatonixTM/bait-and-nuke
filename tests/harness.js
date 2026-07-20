@@ -11,4 +11,6 @@ global.TYPE_CHART = gm.typeChart;
 global.MOVES = {};
 Object.entries(gm.moves).forEach(([id, m]) => { MOVES[id] = {moveId:id, ...m}; });
 global.POKEMON = gm.pokemon;
+// v61: mirror the browser's loadGameData — PvPoke meta scores per CP cap.
+global.META_SCORES = gm.metaScores || {};
 module.exports = { gm };
