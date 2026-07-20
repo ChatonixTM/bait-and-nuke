@@ -1433,7 +1433,18 @@ function renderResult(mon){
     .map(t=>typeBadgeHtml(t)).join('');
 
   const isInSquad = squad.some(s => s.speciesId === mon.speciesId);
-  const fastOpts = fastList.map(f=>`<option value="${f.moveId}"${f.moveId===def.fast.moveId?' selected':''}>${f.name}</option>`).join('');
+  // v62: Elite TM / legacy flagging (PvPoke gamemaster eliteMoves+legacyMoves).
+  // The app previously showed a blanket "some moves may need an Elite TM"
+  // warning without saying WHICH, so you could spend candy on an unobtainable
+  // combo. Options can't hold HTML, so the marker is a plain glyph.
+  const monFlags = (typeof MOVE_FLAGS !== 'undefined' && MOVE_FLAGS[mon.speciesId]) || null;
+  const moveFlag = mv => {
+    if(!monFlags || !mv) return '';
+    if((monFlags.l||[]).includes(mv.moveId)) return '  ·  ⛔ legacy';
+    if((monFlags.e||[]).includes(mv.moveId)) return '  ·  🎫 Elite TM';
+    return '';
+  };
+  const fastOpts = fastList.map(f=>`<option value="${f.moveId}"${f.moveId===def.fast.moveId?' selected':''}>${f.name}${moveFlag(f)}</option>`).join('');
   // compact buff suffix for <option> text (options can't hold HTML, so plain glyphs)
   const optBuff = c => {
     const b = c.buff;
@@ -1444,8 +1455,8 @@ function renderResult(mon){
     }).join('');
     return `  ·  ${g}${b.chance<1?` (${Math.round(b.chance*100)}%)`:''}`;
   };
-  const nukeOpts = chargedList.map(c=>`<option value="${c.moveId}"${c.moveId===def.nuke.moveId?' selected':''}>${c.name}${optBuff(c)}</option>`).join('');
-  const baitOpts = `<option value="">None — single charged move</option>` + chargedList.map(c=>`<option value="${c.moveId}"${def.bait && c.moveId===def.bait.moveId?' selected':''}>${c.name}${optBuff(c)}</option>`).join('');
+  const nukeOpts = chargedList.map(c=>`<option value="${c.moveId}"${c.moveId===def.nuke.moveId?' selected':''}>${c.name}${moveFlag(c)}${optBuff(c)}</option>`).join('');
+  const baitOpts = `<option value="">None — single charged move</option>` + chargedList.map(c=>`<option value="${c.moveId}"${def.bait && c.moveId===def.bait.moveId?' selected':''}>${c.name}${moveFlag(c)}${optBuff(c)}</option>`).join('');
 
   const researchTables = `
     <div id="researchTables" style="${isInSquad ? 'display:none;' : ''}">
@@ -1549,7 +1560,7 @@ function renderResult(mon){
     ${researchTables}
 
     <div class="note tip-dismiss" data-tip="pvpNote"><button class="tip-x" aria-label="Dismiss tip">×</button>
-      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>🎯 Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> some move combos shown here may only be obtainable via an Elite TM (or may no longer be available at all if it's a legacy move) — this dataset doesn't yet flag which ones, so double-check in-game before spending candy. Full current roster (1595 Pokémon, 333 moves), synced from PvPoke's data.
+      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>🎯 Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> moves marked <b>🎫 Elite TM</b> can only be taught with an Elite TM, and <b>⛔ legacy</b> moves are no longer obtainable at all. Everything unmarked is available normally. Flags come from PvPoke's move data — still worth a glance in-game before spending candy. Full current roster (1595 Pokémon, 333 moves), synced from PvPoke's data.
     </div>
   `;
   RESULT.classList.add('show');
@@ -1904,7 +1915,7 @@ SEARCH.addEventListener('keydown', e=>{
 //
 // Now it's fetched once and cached hard by the browser (see _headers). No build
 // step — the app is still plain files you drag into Netlify, just more than one.
-let POKEMON_DATA = [], MOVES_DATA = {}, TYPE_CHART = {}, META_SCORES = {};
+let POKEMON_DATA = [], MOVES_DATA = {}, TYPE_CHART = {}, META_SCORES = {}, MOVE_FLAGS = {};
 
 async function loadGameData(){
   const res = await fetch('gamemaster.json');
@@ -1917,6 +1928,8 @@ async function loadGameData(){
   // speciesId -> meta score (0-100) per CP cap. Absent = PvPoke does not
   // rank it in that league, which is itself the strongest signal.
   META_SCORES  = gm.metaScores || {};
+  // v62: speciesId -> {e:[eliteMoveIds], l:[legacyMoveIds]}
+  MOVE_FLAGS   = gm.moveFlags || {};
 }
 
 
@@ -2901,6 +2914,10 @@ const CUPS = [
     types: ['water','fighting','dark'], window: 'recent rotation', emoji: '📜' }
 ];
 // Pick the live cup by the clock; fall back to the most recently ended one.
+// v63: the encoded schedule has an end date. Once the clock passes it we are
+// guessing, so the app says so instead of quietly showing a dead cup. Extend
+// CUPS with the next season's startISO/endISO values to clear the warning.
+const CUP_SCHEDULE_END = '2026-08-04T20:00:00Z';
 (function(){
   const now = Date.now();
   let liveIdx = -1, lastEnded = -1, lastEndT = -Infinity;
@@ -2913,6 +2930,8 @@ const CUPS = [
   const pick = liveIdx >= 0 ? liveIdx : (lastEnded >= 0 ? lastEnded : 0);
   CUPS.forEach((c,i)=> c.live = (i === pick && liveIdx >= 0));
   window.__bnCupDefault = pick;
+  // Past the end of what we encoded, no cup is genuinely live.
+  window.__bnCupScheduleStale = now >= Date.parse(CUP_SCHEDULE_END);
 })();
 let selectedCupIndex = window.__bnCupDefault ?? 0;
 
@@ -2976,7 +2995,7 @@ function renderCupBanner(){
   el.innerHTML = `
     <button class="cup-min-btn" id="cupMinBtn" aria-label="Minimize banner">▴</button>
     <div>
-      <div class="cup-banner-text">${cup.emoji || '🏆'} ${cup.live ? 'Now in GBL' : 'Previewing'}: <button class="cup-name-btn" id="cupNameBtn">${cup.name}</button></div>
+      <div class="cup-banner-text">${window.__bnCupScheduleStale ? '⚠️' : (cup.emoji || '🏆')} ${window.__bnCupScheduleStale ? 'Schedule out of date — check the live calendar' : (cup.live ? 'Now in GBL' : 'Previewing')}: <button class="cup-name-btn" id="cupNameBtn">${cup.name}</button></div>
       <div class="cup-banner-sub">${cup.league} · ≤${cup.cpCap} CP · ${typesDisplay} · ${cup.window}${cupFilterActive ? ' · <b style="color:var(--signal)">search filtered to this cup ✓</b>' : ' · click the cup name to filter search'}</div>
       <select class="cup-picker" id="cupPicker">
         ${CUPS.map((c,i)=>`<option value="${i}" ${i===selectedCupIndex?'selected':''}>${c.live ? '🏆 ' : (c.emoji || '')} ${c.name}</option>`).join('')}
