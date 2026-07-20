@@ -1689,6 +1689,9 @@
     100%{transform:translateY(0);}
   }
   .tour-caption, .tour-spotlight{touch-action:none;}
+  /* v57: inside the unzoomed anchor — caption takes taps, spotlight never does */
+  #tourAnchor .tour-caption{pointer-events:auto;}
+  #tourAnchor .tour-spotlight{pointer-events:none;}
 
   .pre-search-row{
     display:flex;

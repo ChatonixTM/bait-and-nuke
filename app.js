@@ -1902,17 +1902,17 @@ function loadData(){
       },
     { selector:'#quickAddBar, .search-shell', title:'⚡ Analyze synergy',
       text:'Unlocks at 2+ Pokémon. It reads your squad against <b>this league\'s</b> own power scale — Master League never gets judged by Great League\'s rules.' },
-    { selector:'#result, .main-content', title:'👆 Tap any number', act: actTapTipDemo,
+    { selector:'.nightmare-card, #result', title:'👆 Tap any number', act: actTapTipDemo,
       text:'Every stat explains itself — tap <b>⚡</b>, <b>💥</b>, <b>⏱</b>, or any table header and a plain-English bubble tells you exactly what it means. No jargon left behind.' },
-    { selector:'.squad-slots, #quickAddBar', title:'🔁 Jump between your mons', act: ()=>actPulse('.squad-slot.filled'),
+    { selector:'.squad-slot.filled, .squad-slots', title:'🔁 Jump between your mons', act: ()=>actPulse('.squad-slot.filled'),
       text:'Once your squad has members, tap <b>any squad card</b> (or its chip in the Command Deck) to switch the whole view to that Pokémon — <b>your</b> moves, <b>your</b> kit, never rerolled. The IV tools tuck away behind one 🎯 button.' },
-    { selector:'#result, .main-content', title:'😱 Worst Nightmares — in tiers', act: ()=>actPulse('.nightmare-card'),
+    { selector:'.nightmare-card, #result', title:'😱 Worst Nightmares — in tiers', act: ()=>actPulse('.nightmare-card'),
       text:'Search a mon and scroll to its threat board. <b>💀 Tier 1</b> hard-counters you (type advantage + fast shield pressure). <b>🪨 Tier 2</b> grinds you out — <i>no type advantage needed</i>. <b>🎲 Tier 3</b> looks scary but has no engine behind it.' ,
       act(){ const c=document.querySelector('.nightmare-card'); if(!c) return;
         c.classList.remove('tour-pulse'); void c.offsetWidth; c.classList.add('tour-pulse');
         setTimeout(()=>c.classList.remove('tour-pulse'), 2200); },
       },
-    { selector:'#result, .main-content', title:'🗂 Tap a nightmare — it stacks',
+    { selector:'.nightmare-card, #result', title:'🗂 Tap a nightmare — it stacks',
       text:'Opening a threat gives it its own <b>tab over your work</b> — your squad stays exactly where it was. <b>←</b> minimizes, <b>×</b> closes, and <b>Esc</b> always backs you out. No more losing progress to curiosity.' },
     { selector:'#result, .main-content', title:'🧬 IVs are optional',
       text:'It starts you on realistic <b>8/11/11</b>, so you can ignore this entirely. Or tap <b>🔢 "I only know my CP"</b> and enter CP + level — it reverse-solves your IVs, fixes a wrong level, and catches impossible numbers.' },
@@ -1938,36 +1938,39 @@ function loadData(){
   // Engines disagree on whether getBoundingClientRect returns zoomed or
   // unzoomed coordinates under CSS zoom (Chromium scales, iOS WebKit doesn't).
   // So we measure instead of assume: a 100px fixed probe tells us the truth.
-  function rectScale(){
-    let p = document.getElementById('__zoomProbe');
-    if(!p){
-      p = document.createElement('div');
-      p.id = '__zoomProbe';
-      p.style.cssText = 'position:fixed;top:0;left:0;width:100px;height:1px;pointer-events:none;visibility:hidden;';
-      document.body.appendChild(p);
-    }
-    return p.getBoundingClientRect().width / 100 || 1;
+  // v57: THE ANCHOR. Three failed cures taught the lesson: never MODEL the
+  // engine, ask it. We ship `zoom:1.05` on body for mobile snug-fit, and
+  // Chromium scales getBoundingClientRect under zoom while iOS WebKit does
+  // not. Every prior fix tried to compute the difference (a probe that lived
+  // INSIDE the zoom and so could never see it; then visualViewport offsets
+  // stacked on top). Both made it worse, and the founder field-tested both.
+  //
+  // The cure is to stop computing: park the spotlight and caption INSIDE a
+  // fixed, unzoomed anchor element, and position them from a rect measured
+  // in that same anchor's space. Whatever the engine does to coordinates, it
+  // does to BOTH sides of the subtraction — so the difference is always
+  // right. No probes, no offsets, no engine detection.
+  let __anchor = null;
+  function tourAnchor(){
+    if(__anchor && __anchor.isConnected) return __anchor;
+    __anchor = document.createElement('div');
+    __anchor.id = 'tourAnchor';
+    __anchor.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;zoom:1;pointer-events:none;z-index:900;';
+    document.documentElement.appendChild(__anchor);   // OUTSIDE body: no zoom
+    __anchor.appendChild(SPOTLIGHT);
+    __anchor.appendChild(CAPTION);
+    return __anchor;
   }
 
   function positionOn(el){
-    // v56: RADICAL SIMPLICITY. The spotlight is position:fixed; every
-    // element's getBoundingClientRect() is ALREADY in that same layout-
-    // viewport space — fixed targets, sticky decks, scrolled statics, all of
-    // them. Two prior "corrections" (a zoom-probe divisor for statics only,
-    // then visual-viewport offsets for everyone) each mixed spaces that were
-    // never split, CREATING the misalignment they meant to cure. The founder
-    // field-tested both failures. Now: raw rects, zero math, one path. The
-    // live reposition listeners track any toolbar collapse or drift.
-    // v56 FINAL: the engine-truth probe. We ship zoom:1.05 on mobile, and
-    // engines disagree on rect units under CSS zoom (Chromium scales them,
-    // iOS WebKit doesn't). rectScale() MEASURES the live answer instead of
-    // modeling it, and — the original code's one sin, now absolved — the
-    // factor applies to EVERY target, fixed elements included. Teams and
-    // Profile were mispositioned on both engines because they were exempt.
-    const z = rectScale();
-    const r0 = el.getBoundingClientRect();
-    const r = { top:r0.top/z, left:r0.left/z, width:r0.width/z, height:r0.height/z, bottom:r0.bottom/z };
-    const vw = window.innerWidth/z, vh = window.innerHeight/z;
+    const anchor = tourAnchor();
+    const a = anchor.getBoundingClientRect();          // the anchor's origin
+    const t = el.getBoundingClientRect();              // target, same space
+    const r = { top: t.top - a.top, left: t.left - a.left,
+                width: t.width, height: t.height, bottom: t.bottom - a.top };
+    // Viewport dims expressed in the anchor's space too — same subtraction.
+    const vw = document.documentElement.clientWidth - a.left;
+    const vh = document.documentElement.clientHeight - a.top;
     const pad = 8;
     SPOTLIGHT.style.top = (r.top - pad) + 'px';
     SPOTLIGHT.style.left = (r.left - pad) + 'px';
@@ -2167,6 +2170,8 @@ function loadData(){
   function startTour(){
     stepIndex = 0; tourDir = 1;
     touring = true;
+    tourAnchor();          // v57: adopt spotlight+caption BEFORE first render,
+                           // so the caption's buttons exist in the live tree.
     tourDemoOn();
     document.body.classList.add('touring');
     const blk = document.getElementById('tourBlocker');
