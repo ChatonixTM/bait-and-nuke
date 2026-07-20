@@ -745,7 +745,8 @@
 
   .tour-blocker{display:none;position:fixed;inset:0;z-index:899;background:transparent;touch-action:none;}
   .tour-blocker.show{display:block;}
-  body.touring #quickAddBar{display:none !important;}
+  /* v56: the deck stays VISIBLE during tours — it is the lesson. (The old
+     hide made the deck step spotlight an empty chair and killed the glide.) */
   .tour-spotlight{
     display:none;
     position:fixed;

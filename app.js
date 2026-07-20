@@ -1950,19 +1950,24 @@ function loadData(){
   }
 
   function positionOn(el){
-    const isFixed = getComputedStyle(el).position === 'fixed';
-    const z = isFixed ? 1 : rectScale();
+    // v56: RADICAL SIMPLICITY. The spotlight is position:fixed; every
+    // element's getBoundingClientRect() is ALREADY in that same layout-
+    // viewport space — fixed targets, sticky decks, scrolled statics, all of
+    // them. Two prior "corrections" (a zoom-probe divisor for statics only,
+    // then visual-viewport offsets for everyone) each mixed spaces that were
+    // never split, CREATING the misalignment they meant to cure. The founder
+    // field-tested both failures. Now: raw rects, zero math, one path. The
+    // live reposition listeners track any toolbar collapse or drift.
+    // v56 FINAL: the engine-truth probe. We ship zoom:1.05 on mobile, and
+    // engines disagree on rect units under CSS zoom (Chromium scales them,
+    // iOS WebKit doesn't). rectScale() MEASURES the live answer instead of
+    // modeling it, and — the original code's one sin, now absolved — the
+    // factor applies to EVERY target, fixed elements included. Teams and
+    // Profile were mispositioned on both engines because they were exempt.
+    const z = rectScale();
     const r0 = el.getBoundingClientRect();
-    // v55: iOS Safari's collapsing toolbar splits the world in two — element
-    // rects report VISUAL-viewport coords while position:fixed (the spotlight)
-    // lives in the LAYOUT viewport. The delta is visualViewport.offset*, and
-    // ignoring it made every highlight sit "slightly too high" (or wildly off
-    // for the fixed tab bar). The founder's screenshots were the proof.
-    const vv = window.visualViewport;
-    const oy = vv ? vv.offsetTop : 0, ox = vv ? vv.offsetLeft : 0;
-    const r = { top:(r0.top+oy)/z, left:(r0.left+ox)/z, width:r0.width/z, height:r0.height/z, bottom:(r0.bottom+oy)/z };
-    const vw = (vv ? vv.width + ox : window.innerWidth) / z;
-    const vh = (vv ? vv.height + oy : window.innerHeight) / z;
+    const r = { top:r0.top/z, left:r0.left/z, width:r0.width/z, height:r0.height/z, bottom:r0.bottom/z };
+    const vw = window.innerWidth/z, vh = window.innerHeight/z;
     const pad = 8;
     SPOTLIGHT.style.top = (r.top - pad) + 'px';
     SPOTLIGHT.style.left = (r.left - pad) + 'px';
@@ -1971,7 +1976,6 @@ function loadData(){
 
     const captionTop = r.bottom + 16 < vh - 160 ? r.bottom + 16 : Math.max(16, r.top - 190);
     if(vw < 480){
-      // phones: center the card, full usable width — no more hugging a corner
       CAPTION.style.left = '16px';
       CAPTION.style.width = (vw - 32) + 'px';
       CAPTION.style.maxWidth = (vw - 32) + 'px';
