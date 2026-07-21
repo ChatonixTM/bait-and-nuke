@@ -4521,3 +4521,282 @@ document.addEventListener('keydown', (e)=>{
     for(let i=0;i<5;i++) setTimeout(pop, i*90);   // a little flourish on tap
   });
 })();
+
+/* ============================================================================
+   THE COACH (v66) — offline, engine-backed chat.
+   Requested six times across five handoffs. This is it.
+
+   Architecture: PARSER (sentence → intent) → ROUTER (calls the REAL engine:
+   findNightmares / scoreSquadReal — never a copy) → VOICE (objects → sentences).
+   No API. No network. If it can't answer, the sprite SHRUGS — honesty is a
+   visible state, not a buried sentence (Rule 16 wearing a hat).
+
+   UI safety: corner-docked via CSS bottom/right only — zero JS positioning,
+   zero getBoundingClientRect, zero coordinate math (the spotlight scar, Rule
+   14/15). Panel is a small fixed card, background stays scrollable — no
+   lockBodyScroll, so the refcount locktest guards is untouched. All animation
+   is transform/opacity. No CSS zoom exists and none may ever return.
+   ============================================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- sprite (inline SVG, colors are theme vars → recolors free) --- */
+  function coachSVG(){return `
+<svg viewBox="0 0 44 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <ellipse class="c-shadow" cx="22" cy="53" rx="13" ry="2.6" fill="#000" opacity=".3"/>
+  <g class="c-body">
+    <g class="c-antenna">
+      <rect x="21" y="6" width="2" height="7" fill="var(--text-dim,#94a4b2)"/>
+      <g class="c-bulb">
+        <rect x="19" y="2" width="6" height="5" fill="var(--signal,#4de8c9)"/>
+        <rect x="20" y="1" width="4" height="1" fill="var(--signal,#4de8c9)"/>
+        <rect x="20" y="7" width="4" height="1" fill="var(--signal,#4de8c9)"/>
+        <rect x="20" y="3" width="2" height="2" fill="#fff" opacity=".85"/>
+      </g>
+    </g>
+    <rect x="8" y="13" width="28" height="2" fill="var(--line,#1f2a35)"/>
+    <rect x="7" y="15" width="30" height="16" fill="var(--panel,#121820)"/>
+    <rect x="6" y="17" width="1" height="12" fill="var(--panel,#121820)"/>
+    <rect x="37" y="17" width="1" height="12" fill="var(--panel,#121820)"/>
+    <rect x="8" y="31" width="28" height="2" fill="var(--line,#1f2a35)"/>
+    <rect x="10" y="15" width="24" height="1" fill="var(--text-dim,#94a4b2)" opacity=".45"/>
+    <rect x="9" y="18" width="26" height="9" fill="var(--bg,#0f151c)"/>
+    <rect x="9" y="18" width="26" height="1" fill="#000" opacity=".35"/>
+    <g class="c-eyes">
+      <rect x="13" y="20" width="5" height="5" fill="var(--signal,#4de8c9)"/>
+      <rect x="26" y="20" width="5" height="5" fill="var(--signal,#4de8c9)"/>
+      <rect x="14" y="21" width="2" height="2" fill="#fff" opacity=".9"/>
+      <rect x="27" y="21" width="2" height="2" fill="#fff" opacity=".9"/>
+    </g>
+    <g class="c-brow">
+      <rect x="12" y="19" width="6" height="1" fill="var(--amber,#ffb454)"/>
+      <rect x="26" y="19" width="6" height="1" fill="var(--amber,#ffb454)"/>
+    </g>
+    <rect x="4" y="20" width="2" height="5" fill="var(--line,#1f2a35)"/>
+    <rect x="38" y="20" width="2" height="5" fill="var(--line,#1f2a35)"/>
+    <rect x="19" y="33" width="6" height="2" fill="var(--line,#1f2a35)"/>
+    <rect x="12" y="35" width="20" height="13" fill="var(--panel,#121820)"/>
+    <rect x="12" y="35" width="20" height="1" fill="var(--text-dim,#94a4b2)" opacity=".4"/>
+    <rect x="12" y="47" width="20" height="1" fill="#000" opacity=".3"/>
+    <rect x="19" y="38" width="6" height="6" fill="var(--bg,#0f151c)"/>
+    <rect x="20" y="39" width="4" height="4" fill="var(--signal,#4de8c9)" opacity=".8"/>
+    <rect x="21" y="40" width="2" height="2" fill="#fff" opacity=".55"/>
+    <g class="c-arm-l"><rect x="8" y="36" width="4" height="10" fill="var(--panel,#121820)"/>
+      <rect x="8" y="45" width="4" height="2" fill="var(--line,#1f2a35)"/></g>
+    <g class="c-arm-r"><rect x="32" y="36" width="4" height="10" fill="var(--panel,#121820)"/>
+      <rect x="32" y="45" width="4" height="2" fill="var(--line,#1f2a35)"/></g>
+    <rect x="15" y="48" width="5" height="4" fill="var(--line,#1f2a35)"/>
+    <rect x="24" y="48" width="5" height="4" fill="var(--line,#1f2a35)"/>
+    <rect x="14" y="51" width="7" height="2" fill="var(--panel,#121820)"/>
+    <rect x="23" y="51" width="7" height="2" fill="var(--panel,#121820)"/>
+    <g class="c-dots">
+      <rect class="c-dot1" x="38" y="10" width="2" height="2" fill="var(--signal,#4de8c9)"/>
+      <rect class="c-dot2" x="41" y="7" width="2" height="2" fill="var(--signal,#4de8c9)"/>
+      <rect class="c-dot3" x="44" y="4" width="2" height="2" fill="var(--signal,#4de8c9)"/>
+    </g>
+    <g class="c-spark">
+      <rect x="2" y="10" width="2" height="2" fill="var(--amber,#ffb454)"/>
+      <rect x="40" y="12" width="2" height="2" fill="var(--amber,#ffb454)"/>
+      <rect x="6" y="6" width="2" height="2" fill="var(--signal,#4de8c9)"/>
+      <rect x="36" y="5" width="2" height="2" fill="var(--signal,#4de8c9)"/>
+    </g>
+  </g>
+</svg>`;}
+
+  /* ---------- mount ------------------------------------------------------- */
+  const dock = document.createElement('button');
+  dock.id = 'coachDock';
+  dock.setAttribute('aria-label', 'Open the Coach');
+  dock.innerHTML = `<span class="coach" data-state="idle">${coachSVG()}</span>`;
+
+  const panel = document.createElement('div');
+  panel.id = 'coachPanel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'The Coach');
+  panel.innerHTML = `
+    <div class="coach-head">
+      <span class="coach coach-head-sprite" data-state="idle">${coachSVG()}</span>
+      <div class="coach-head-text">
+        <div class="coach-title">The Coach</div>
+        <div class="coach-sub">offline · runs the real engine</div>
+      </div>
+      <button class="coach-close" id="coachClose" aria-label="Close">×</button>
+    </div>
+    <div class="coach-log" id="coachLog"></div>
+    <div class="coach-chips" id="coachChips">
+      <button class="coach-chip" data-q="is my squad good?">Rate my squad</button>
+      <button class="coach-chip" data-q="who beats azumarill?">Who beats Azumarill?</button>
+    </div>
+    <form class="coach-inputrow" id="coachForm">
+      <input id="coachInput" type="text" autocomplete="off" enterkeyhint="send"
+             placeholder="who beats azumarill? · is my squad good?">
+      <button type="submit" class="coach-send" aria-label="Ask">➤</button>
+    </form>`;
+
+  document.body.appendChild(dock);
+  document.body.appendChild(panel);
+
+  const log = panel.querySelector('#coachLog');
+  const input = panel.querySelector('#coachInput');
+  const sprites = [dock.querySelector('.coach'), panel.querySelector('.coach')];
+
+  /* ---------- sprite state machine --------------------------------------- */
+  let revertT = null;
+  function setState(s){
+    clearTimeout(revertT);
+    sprites.forEach(el=>{ el.dataset.state='idle'; void el.offsetWidth; el.dataset.state=s; });
+    if(s==='answer') revertT = setTimeout(()=>setState('idle'), 640);
+    if(s==='shrug')  revertT = setTimeout(()=>setState('idle'), 1520);
+  }
+
+  /* ---------- chat plumbing ----------------------------------------------- */
+  function say(html, who){
+    const b = document.createElement('div');
+    b.className = 'coach-msg ' + (who==='you' ? 'from-you' : 'from-coach');
+    b.innerHTML = html;
+    log.appendChild(b);
+    log.scrollTop = log.scrollHeight;
+  }
+  const esc = t => t.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  /* ---------- mon name resolution (reuses the app's levenshtein) ---------- */
+  function resolveMon(raw){
+    const q = raw.trim().toLowerCase().replace(/\s+/g,' ');
+    if(q.length < 3 || !POKEMON.length) return null;
+    let hit = POKEMON.find(p=>p.speciesName.toLowerCase() === q);
+    if(hit) return hit;
+    const starts = POKEMON.filter(p=>p.speciesName.toLowerCase().startsWith(q));
+    if(starts.length){
+      // prefer the base form (shortest name) so "azumarill" doesn't grab a variant
+      starts.sort((a,b)=>a.speciesName.length - b.speciesName.length);
+      return starts[0];
+    }
+    // fuzzy: base names only, distance ≤ 2 (same tolerance as search)
+    let best = null, bestD = 3;
+    for(const p of POKEMON){
+      const base = p.speciesName.toLowerCase().replace(/\s*\(.*\)$/,'');
+      if(Math.abs(base.length - q.length) > 2) continue;
+      const d = levenshtein(q, base);
+      if(d < bestD){ bestD = d; best = p; }
+    }
+    return best;
+  }
+
+  /* ---------- parser ------------------------------------------------------ */
+  function parse(text){
+    const t = text.trim().toLowerCase().replace(/[?!.]+$/,'');
+    if(!t) return {intent:'none'};
+
+    if(/(^|\b)(is my (squad|team)|rate my|how('s| is| good is) my (squad|team)|squad check|team check|my (squad|team) (good|any good|ok|okay))\b/.test(t))
+      return {intent:'squad'};
+
+    let m = t.match(/(?:who|what)\s+(?:beats?|counters?|kills?|handles?|checks?|destroys?)\s+(.+)/)
+         || t.match(/(?:beat|counter|kill|handle|check|answer)\s+(?:a\s+|an\s+)?(.+)/)
+         || t.match(/(.+?)\s+(?:counters?|nightmares?|threats?|checks?)$/)
+         || t.match(/nightmares?\s+(?:for|of)\s+(.+)/);
+    if(m){
+      const mon = resolveMon(m[1]);
+      return mon ? {intent:'counters', mon} : {intent:'unknown-mon', raw:m[1]};
+    }
+
+    // bare mon name → counters is the natural read
+    const mon = resolveMon(t);
+    if(mon) return {intent:'counters', mon};
+
+    return {intent:'unknown'};
+  }
+
+  /* ---------- voice ------------------------------------------------------- */
+  const TIER_WORD = {1:'hard counter', 2:'grinder', 3:'coincidental check'};
+
+  function voiceCounters(mon){
+    const board = findNightmares(mon, 9);
+    if(!board.length)
+      return {state:'shrug', html:`I ran the board and got nothing back for <b>${esc(mon.speciesName)}</b> — that usually means a data gap, not an unbeatable mon. Tap it in the deck and check its full board.`};
+
+    const t1 = board.filter(k=>k.tier===1);
+    const worst = board[0];
+    const wName = esc(worst.c.speciesName);
+    const via = worst.viaType ? esc(String(worst.viaType)) : null;
+
+    let out = '';
+    if(t1.length){
+      out += `<b>${wName}</b> is the biggest problem for ${esc(mon.speciesName)}` +
+             (via ? ` — it pressures through <b>${via}</b> and ${esc(mon.speciesName)} can't answer back efficiently.` : '.');
+      const rest = t1.slice(1).map(k=>esc(k.c.speciesName));
+      if(rest.length) out += ` Same story from <b>${rest.join('</b> and <b>')}</b>.`;
+    } else {
+      out += `Nothing hard-counters ${esc(mon.speciesName)} — the worst it faces is <b>${wName}</b>, a ${TIER_WORD[worst.tier]}. That's a strong sign for it.`;
+    }
+    const t2 = board.filter(k=>k.tier===2).slice(0,2).map(k=>esc(k.c.speciesName));
+    if(t2.length) out += ` Watch for <b>${t2.join('</b> and <b>')}</b> grinding it down in longer exchanges.`;
+
+    // the clever bit: cross-reference the user's live squad
+    if(typeof squad !== 'undefined' && squad.some(e=>e.speciesId === mon.speciesId)){
+      out += ` It's on <b>your squad</b> right now — if you see ${wName} in the lead, don't feed it your ${esc(mon.speciesName)}.`;
+    }
+    return {state:'answer', html:out};
+  }
+
+  function voiceSquad(){
+    if(typeof squad === 'undefined' || !squad.length)
+      return {state:'shrug', html:`Your squad is empty — seat up to three mons in the deck and ask me again. I score what's real, not hypotheticals.`};
+    const r = scoreSquadReal();
+    let out = `<b>${r.synergy_score}/99 — ${esc(r.tagline||'')}</b><br>`;
+    const s0 = (r.strengths||[])[0], k0 = (r.risks||[])[0];
+    if(s0) out += `<span class="coach-good">✓</span> ${s0}<br>`;
+    if(k0) out += `<span class="coach-bad">✗</span> ${k0}<br>`;
+    if(squad.length < 3){
+      out += `That's with <b>${squad.length}/3</b> seats filled — the score is honest about the gap.`;
+    } else if(r.order){
+      out += `Order I'd run: <b>${r.order.map(o=>esc(o.name)).join(' → ')}</b>.`;
+    }
+    return {state:'answer', html:out};
+  }
+
+  function respond(text){
+    say(esc(text), 'you');
+    const p = parse(text);
+    let r;
+    if(p.intent==='counters')      r = voiceCounters(p.mon);
+    else if(p.intent==='squad')    r = voiceSquad();
+    else if(p.intent==='unknown-mon')
+      r = {state:'shrug', html:`I don't know a mon called “${esc(p.raw)}” — check the spelling, or tap it in the deck and I'll follow along.`};
+    else
+      r = {state:'shrug', html:`That one's outside what I can actually verify. I can answer two things honestly: <b>who beats [mon]</b> and <b>is my squad good</b>. Anything else would be me guessing, and I don't guess.`};
+    setState(r.state);
+    say(r.html, 'coach');
+  }
+
+  /* ---------- wiring ------------------------------------------------------ */
+  function openPanel(){
+    panel.classList.add('open');
+    dock.classList.add('hidden');
+    if(!log.children.length){
+      say(`I'm the Coach. I run this app's real engine — same math as the boards, zero guesswork. Ask me <b>who beats [mon]</b> or <b>is my squad good</b>.`, 'coach');
+    }
+  }
+  function closePanel(){
+    panel.classList.remove('open');
+    dock.classList.remove('hidden');
+  }
+  dock.addEventListener('click', openPanel);
+  panel.querySelector('#coachClose').addEventListener('click', closePanel);
+  panel.querySelector('#coachForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const t = input.value;
+    if(!t.trim()) return;
+    input.value='';
+    respond(t);
+  });
+  panel.querySelector('#coachChips').addEventListener('click', e=>{
+    const c = e.target.closest('.coach-chip');
+    if(c) respond(c.dataset.q);
+  });
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape' && panel.classList.contains('open')) closePanel();
+  });
+
+  /* test hook */
+  window.__bnCoach = { parse, resolveMon, open: openPanel, close: closePanel };
+})();
