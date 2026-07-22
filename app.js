@@ -1773,7 +1773,7 @@ function renderQuickAddBar(mon){
   // so every freshly-completed squad gets its own nudge.
   const becameFull = squad.length === 3 && (window.__bnPrevSquadLen ?? 0) < 3;
   window.__bnPrevSquadLen = squad.length;
-  const btnLabel = inSquad ? '✓ In squad — remove' : (squadFull ? 'Squad full — manage ↓' : `+ Add ${mon.speciesName} to squad`);
+  const btnLabel = inSquad ? '✓ In squad — remove' : (squadFull ? `⇄ Swap in ${mon.speciesName}` : `+ Add ${mon.speciesName} to squad`);
 
   const mainLeague = document.getElementById('leagueSelect');
   const currentLeague = mainLeague ? mainLeague.value : 'Great League';
@@ -1795,6 +1795,11 @@ function renderQuickAddBar(mon){
   // whatever you should press next: the Add button when a mon is picked, the
   // ⚡ when the squad hits three. Only scrolls if the target is actually out
   // of view, and never fights a scroll you are performing yourself.
+  if(becameFull){
+    // (Cannot re-trigger the yank: v68 gates yanking on real user gestures.)
+    const shellEl = document.querySelector('.search-shell');
+    if(shellEl) setTimeout(()=> shellEl.scrollIntoView({behavior:'smooth', block:'start'}), 150);
+  }
   requestAnimationFrame(()=>{
     if(bar.__bnUserScrolling) return;
     const target = becameFull
@@ -1880,8 +1885,38 @@ function renderQuickAddBar(mon){
   });
   document.getElementById('addSquadBtn').addEventListener('click', ()=>{
     if(!squad.some(s => s.speciesId === mon.speciesId) && squad.length >= 3){
-      const sp = document.getElementById('squadPanel');
-      if(sp) sp.scrollIntoView({behavior:'smooth', block:'start'});
+      // v68: full squad = swap flow, right here in the deck. Ask who leaves.
+      const btn = document.getElementById('addSquadBtn');
+      if(!btn.classList.contains('swap-arm')){
+        btn.classList.add('swap-arm');
+        btn.__bnOldLabel = btn.textContent;
+        btn.textContent = 'Who leaves? Tap their chip →';
+        // arm the chips: next chip tap replaces that mon
+        [...bar.querySelectorAll('.qa-mon-chip')].forEach(chip=>{
+          chip.classList.add('swap-target');
+          chip.__bnSwap = (e)=>{
+            e.stopPropagation();
+            const i = squad.findIndex(x=>x.speciesId===chip.dataset.sid);
+            if(i>-1){
+              squad.splice(i, 1, currentMonBest);
+              renderSquad();
+              renderQuickAddBar(mon);
+              const rt = document.getElementById('researchTables');
+              if(rt) rt.style.display = 'none';
+            }
+          };
+          chip.addEventListener('click', chip.__bnSwap, {capture:true, once:true});
+        });
+        // disarm on a second press of the main button
+        setTimeout(()=>{ btn.addEventListener('click', function disarm(){
+          btn.classList.remove('swap-arm');
+          btn.textContent = btn.__bnOldLabel;
+          [...bar.querySelectorAll('.qa-mon-chip')].forEach(c=>{
+            c.classList.remove('swap-target');
+            if(c.__bnSwap) c.removeEventListener('click', c.__bnSwap, {capture:true});
+          });
+        }, {once:true}); }, 0);
+      }
       return;
     }
     if(squad.some(s => s.speciesId === mon.speciesId)){
@@ -2331,6 +2366,12 @@ function loadData(){
   if(!brand || !shell || !bar) return;
   let ticking = false;
   let lastY = window.scrollY, lastT = performance.now();
+  // v68: the yank must only answer a human flick. Track the last real scroll
+  // gesture; programmatic glides (add-to-squad, analyze) have none.
+  let lastGesture = 0;
+  const noteGesture = ()=>{ lastGesture = performance.now(); };
+  window.addEventListener('wheel', noteGesture, {passive:true});
+  window.addEventListener('touchmove', noteGesture, {passive:true});
   function update(){
     ticking = false;
     const brandGone = brand.getBoundingClientRect().bottom <= 0;
@@ -2347,7 +2388,7 @@ function loadData(){
     const velocity = dy / dt; // px/ms, positive = scrolling down
     if(y <= 4){
       shell.classList.remove('yanked');
-    } else if(velocity > 1.15 && dy > 4){
+    } else if(velocity > 1.15 && dy > 4 && (performance.now() - lastGesture) < 250){
       shell.classList.add('yanked');
     } else if(dy < -3){
       shell.classList.remove('yanked');
@@ -2366,6 +2407,15 @@ function loadData(){
     if(!ticking){ ticking = true; requestAnimationFrame(update); }
   }, {passive:true});
   window.addEventListener('resize', update);
+  // v68: a tap on the (ghosted) search area un-yanks and focuses — the box
+  // wakes up under your finger instead of silently eating the tap.
+  shell.addEventListener('pointerdown', ()=>{
+    if(shell.classList.contains('yanked')){
+      shell.classList.remove('yanked');
+      const si = document.getElementById('search');
+      if(si) si.focus();
+    }
+  });
   update();
 })();
 
