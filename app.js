@@ -4606,18 +4606,18 @@ document.addEventListener('keydown', (e)=>{
   /* ---------- mount ------------------------------------------------------- */
   const dock = document.createElement('button');
   dock.id = 'coachDock';
-  dock.setAttribute('aria-label', 'Open the Coach');
+  dock.setAttribute('aria-label', 'Open Sprocket');
   dock.innerHTML = `<span class="coach" data-state="idle">${coachSVG()}</span>`;
 
   const panel = document.createElement('div');
   panel.id = 'coachPanel';
   panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'The Coach');
+  panel.setAttribute('aria-label', 'Sprocket');
   panel.innerHTML = `
     <div class="coach-head">
       <span class="coach coach-head-sprite" data-state="idle">${coachSVG()}</span>
       <div class="coach-head-text">
-        <div class="coach-title">The Coach</div>
+        <div class="coach-title">Sprocket</div>
         <div class="coach-sub">offline · runs the real engine</div>
       </div>
       <button class="coach-close" id="coachClose" aria-label="Close">×</button>
@@ -4690,13 +4690,42 @@ document.addEventListener('keydown', (e)=>{
     if(/(^|\b)(is my (squad|team)|rate my|how('s| is| good is) my (squad|team)|squad check|team check|my (squad|team) (good|any good|ok|okay))\b/.test(t))
       return {intent:'squad'};
 
-    let m = t.match(/(?:who|what)\s+(?:beats?|counters?|kills?|handles?|checks?|destroys?)\s+(.+)/)
+    /* v67 precedence fix: the two-mon matchup pattern must run BEFORE the
+       loose one-mon counters patterns, or "does X beat Y" gets eaten by
+       `beat (.+)` and answered as counters-for-Y. Root cause = order. */
+    let m = t.match(/(?:does|can|will|would)\s+(.+?)\s+(?:beat|counter|kill|handle|check|win against)\s+(.+)/)
+         || t.match(/(.+?)\s+(?:vs\.?|versus)\s+(.+)/);
+    if(m){
+      const a = resolveMon(m[1]), b = resolveMon(m[2]);
+      if(a && b) return {intent:'matchup', a, b};
+      if(a || b) return {intent:'unknown-mon', raw: a ? m[2] : m[1]};
+      // neither side is a mon ("does rain beat sun") → fall through
+    }
+
+    m = t.match(/(?:who|what)\s+(?:beats?|counters?|kills?|handles?|checks?|destroys?)\s+(.+)/)
          || t.match(/(?:beat|counter|kill|handle|check|answer)\s+(?:a\s+|an\s+)?(.+)/)
          || t.match(/(.+?)\s+(?:counters?|nightmares?|threats?|checks?)$/)
          || t.match(/nightmares?\s+(?:for|of)\s+(.+)/);
     if(m){
       const mon = resolveMon(m[1]);
       return mon ? {intent:'counters', mon} : {intent:'unknown-mon', raw:m[1]};
+    }
+
+    // v67: opinion — "do you like my squad" / "do you like azumarill"
+    m = t.match(/(?:do (?:you|u) like|thoughts on|rate|what do (?:you|u) think (?:of|about))\s+(?:my\s+)?(.+)/);
+    if(m){
+      if(/^(squad|team|build|mons)$/.test(m[1].trim())) return {intent:'opinion-squad'};
+      const om = resolveMon(m[1]);
+      if(om) return {intent:'opinion-mon', mon: om};
+      return {intent:'unknown-mon', raw: m[1]};
+    }
+
+    // v67: moveset — "moves for X", "best kit for X", "X moveset"
+    m = t.match(/(?:(?:what|which|best)\s+)?(?:moves?|moveset|kit|loadout)\s+(?:for|on)\s+(.+)/)
+     || t.match(/(.+?)\s+(?:moveset|moves|kit|loadout)$/);
+    if(m){
+      const mm = resolveMon(m[1]);
+      return mm ? {intent:'moveset', mon: mm} : {intent:'unknown-mon', raw: m[1]};
     }
 
     // bare mon name → counters is the natural read
@@ -4754,16 +4783,98 @@ document.addEventListener('keydown', (e)=>{
     return {state:'answer', html:out};
   }
 
+  /* v67: matchup — answered by cross-referencing the REAL nightmare boards
+     both directions. No new math exists here, so nothing can drift. */
+  function voiceMatchup(a, b){
+    const bBoard = findNightmares(b, 9);
+    const aBoard = findNightmares(a, 9);
+    const aOnB = bBoard.find(k=>k.c.speciesId===a.speciesId);
+    const bOnA = aBoard.find(k=>k.c.speciesId===b.speciesId);
+    const A = esc(a.speciesName), B = esc(b.speciesName);
+    let out;
+    if(aOnB && (!bOnA || aOnB.tier < bOnA.tier)){
+      out = `<b>${A} wins.</b> It sits at Tier ${aOnB.tier} on ${B}'s own nightmare board` +
+            (aOnB.viaType ? ` — the pressure comes through <b>${esc(String(aOnB.viaType))}</b>.` : '.');
+      if(aOnB.tier===1) out += ` That's a hard counter; ${B} shouldn't stay in.`;
+    } else if(bOnA && (!aOnB || bOnA.tier < aOnB.tier)){
+      out = `<b>${B} wins.</b> It's Tier ${bOnA.tier} on ${A}'s nightmare board` +
+            (bOnA.viaType ? ` — through <b>${esc(String(bOnA.viaType))}</b>.` : '.');
+      if(bOnA.tier===1) out += ` ${A} should never take this fight.`;
+    } else if(aOnB && bOnA){
+      out = `They threaten <b>each other</b> — both appear on each other's boards at Tier ${aOnB.tier}. This one comes down to shields and who charges first.`;
+    } else {
+      out = `Neither hard-counters the other — the engine doesn't put either on the other's nightmare board. It'll come down to <b>shields, energy, and who baits better</b>. Even fight; play it clean.`;
+    }
+    return {state:'answer', html:out};
+  }
+
+  /* v67: moveset — pickDefaultLoadout, but YOUR kit if the mon is seated
+     (the v51 rule: never show auto-picks over the user's own choices). */
+  function voiceMoveset(mon){
+    const fl = (mon.fastMoves||[]).map(id=>MOVES[id]).filter(Boolean);
+    const cl = (mon.chargedMoves||[]).map(id=>MOVES[id]).filter(Boolean);
+    if(!fl.length || !cl.length)
+      return {state:'shrug', html:`No complete moveset data for <b>${esc(mon.speciesName)}</b> — that's a data gap, not me dodging.`};
+    const seated = (typeof squad!=='undefined') && squad.find(e=>e.speciesId===mon.speciesId);
+    const kit = seated || pickDefaultLoadout(mon, fl, cl);
+    const nm = mv => mv && (mv.name || mv.moveId || '?');
+    let out = seated
+      ? `That one's on your squad, so this is <b>your kit</b>, exactly as you set it: `
+      : `Best kit the engine picks for <b>${esc(mon.speciesName)}</b>: `;
+    out += `fast <b>${esc(nm(kit.fast))}</b>`;
+    if(kit.bait) out += `, bait <b>${esc(nm(kit.bait))}</b>`;
+    if(kit.nuke) out += `, nuke <b>${esc(nm(kit.nuke))}</b>`;
+    out += '.';
+    if(!seated && kit.bait && kit.nuke) out += ` Bait with the cheap one, close with the big one — that's the whole game.`;
+    return {state:'answer', html:out};
+  }
+
+  /* v67: opinion — personality strictly ON TOP of real numbers. Sprocket
+     never flatters: every opinion is the scorer or the board wearing a face. */
+  function voiceOpinionSquad(){
+    if(typeof squad==='undefined' || !squad.length)
+      return {state:'shrug', html:`Can't have an opinion about an empty bench. Seat some mons and ask me again.`};
+    const r = scoreSquadReal();
+    const sc = r.synergy_score;
+    let mood;
+    if(sc>=80)      mood = `Honestly? <b>I love it.</b> `;
+    else if(sc>=65) mood = `It's <b>solid</b>. I'd queue with it. `;
+    else if(sc>=45) mood = `I've seen worse. I've also seen a lot better. `;
+    else            mood = `You want honesty? <b>It needs work.</b> `;
+    let out = mood + `The math says <b>${sc}/99</b> — ${esc(r.tagline||'')}.`;
+    const k0=(r.risks||[])[0];
+    if(sc<65 && k0) out += `<br>The thing dragging it down: ${k0}`;
+    else { const s0=(r.strengths||[])[0]; if(s0) out += `<br>What's carrying: ${s0}`; }
+    return {state:'answer', html:out};
+  }
+
+  function voiceOpinionMon(mon){
+    const board = findNightmares(mon, 9);
+    const t1 = board.filter(k=>k.tier===1).length;
+    const N = esc(mon.speciesName);
+    let out;
+    if(t1===0)      out = `<b>${N}? Genuinely scary pick.</b> Nothing hard-counters it — the worst it faces are grinders. I respect it.`;
+    else if(t1<=2)  out = `<b>${N} is a real one.</b> ${t1===1?'One':'Two'} hard counter${t1>1?'s':''} to play around — <b>${esc(board[0].c.speciesName)}</b> chief among them — but dodge that and it does work.`;
+    else            out = `<b>${N}... look, I won't lie to you.</b> It has ${t1} hard counters, starting with <b>${esc(board[0].c.speciesName)}</b>. It gets deleted a lot. Run it for love, not for wins.`;
+    if(typeof squad!=='undefined' && squad.some(e=>e.speciesId===mon.speciesId))
+      out += ` And yes, I see it on your squad. My opinion stands.`;
+    return {state:'answer', html:out};
+  }
+
   function respond(text){
     say(esc(text), 'you');
     const p = parse(text);
     let r;
     if(p.intent==='counters')      r = voiceCounters(p.mon);
     else if(p.intent==='squad')    r = voiceSquad();
+    else if(p.intent==='matchup')  r = voiceMatchup(p.a, p.b);
+    else if(p.intent==='moveset')  r = voiceMoveset(p.mon);
+    else if(p.intent==='opinion-squad') r = voiceOpinionSquad();
+    else if(p.intent==='opinion-mon')   r = voiceOpinionMon(p.mon);
     else if(p.intent==='unknown-mon')
       r = {state:'shrug', html:`I don't know a mon called “${esc(p.raw)}” — check the spelling, or tap it in the deck and I'll follow along.`};
     else
-      r = {state:'shrug', html:`That one's outside what I can actually verify. I can answer two things honestly: <b>who beats [mon]</b> and <b>is my squad good</b>. Anything else would be me guessing, and I don't guess.`};
+      r = {state:'shrug', html:`That one's outside what I can actually verify. I can answer these honestly: <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, <b>do you like [mon]</b>, and <b>is my squad good</b>. Anything else would be me guessing, and I don't guess.`};
     setState(r.state);
     say(r.html, 'coach');
   }
@@ -4773,7 +4884,7 @@ document.addEventListener('keydown', (e)=>{
     panel.classList.add('open');
     dock.classList.add('hidden');
     if(!log.children.length){
-      say(`I'm the Coach. I run this app's real engine — same math as the boards, zero guesswork. Ask me <b>who beats [mon]</b> or <b>is my squad good</b>.`, 'coach');
+      say(`I'm <b>Sprocket</b>. I run this app's real engine — same math as the boards, zero guesswork. Ask me <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, or <b>is my squad good</b>.`, 'coach');
     }
   }
   function closePanel(){
