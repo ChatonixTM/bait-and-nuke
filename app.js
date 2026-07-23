@@ -4573,6 +4573,51 @@ document.addEventListener('keydown', (e)=>{
 })();
 
 /* ============================================================================
+   SLEEPER FINDER (v69) — the mission feature: "who does the meta forget?"
+   Born from a field loss: a 66.8-rated BB Vanilluxe built to execute the
+   grounds/flyers that kill Tinkaton. This inverts findNightmares to find
+   such picks systematically: given a core mon X, surface OFF-META mons that
+   beat the things that beat X. No new combat math — every judgment below is
+   the existing engine asked a new question.
+   ============================================================================ */
+function findSleepers(X, opts){
+  opts = opts || {};
+  const cap = (document.getElementById('leagueSelect') &&
+               {'Great League':1500,'Ultra League':2500,'Master League':10000}[document.getElementById('leagueSelect').value]) || 1500;
+  const META = (typeof META_SCORES !== 'undefined' && (META_SCORES[cap] || META_SCORES[String(cap)])) || {};
+  const SLEEPER_CEILING = opts.ceiling || 80;   // meta score below this = "nobody expects it"
+  const killers = findNightmares(X, opts.killers || 6);
+  const tally = new Map();
+  for(const K of killers){
+    const kWeight = K.tier===1 ? 3 : K.tier===2 ? 2 : 1;
+    // Mine DEEP: the engine's meta-damping pushes off-meta mons down each
+    // board, which is exactly where sleepers live. Top-10 misses them.
+    const board = findNightmares(K.c, 22);
+    for(const cand of board){
+      const id = cand.c.speciesId;
+      if(id === X.speciesId) continue;
+      if(/_mega|_primal/.test(id)) continue;              // banned from GBL
+      const w = (4 - cand.tier) * kWeight;
+      const e = tally.get(id) || {mon: cand.c, score: 0, eats: []};
+      e.score += w;
+      if(!e.eats.some(x=>x.name===K.c.speciesName))
+        e.eats.push({name: K.c.speciesName, tier: cand.tier});
+      tally.set(id, e);
+    }
+  }
+  const out = [];
+  for(const e of tally.values()){
+    const m = META[e.mon.speciesId];
+    const offMeta = (m === undefined) || (m < SLEEPER_CEILING);
+    if(!offMeta) continue;                                 // the whole point
+    if(e.eats.length < 2) continue;                        // must execute 2+ of X's killers
+    out.push({mon: e.mon, weight: e.score, metaScore: (m===undefined? null : m), eats: e.eats});
+  }
+  out.sort((a,b)=>b.weight - a.weight);
+  return out.slice(0, opts.top || 5);
+}
+
+/* ============================================================================
    THE COACH (v66) — offline, engine-backed chat.
    Requested six times across five handoffs. This is it.
 
@@ -4740,11 +4785,20 @@ document.addEventListener('keydown', (e)=>{
     if(/(^|\b)(is my (squad|team)|rate my|how('s| is| good is) my (squad|team)|squad check|team check|my (squad|team) (good|any good|ok|okay))\b/.test(t))
       return {intent:'squad'};
 
+    // v69: sleeper finder — "sleepers for tinkaton", "find sleeper partners for X"
+    let m = t.match(/(?:find\s+)?sleepers?(?:\s+(?:picks?|partners?|tech))?\s+(?:for|with|around|vs)\s+(.+)/);
+    if(m){
+      if(/^(?:my\s+)?(?:squad|team)$/.test(m[1].trim()))
+        return {intent:'sleepers-squad'};
+      const sm = resolveMon(m[1]);
+      return sm ? {intent:'sleepers', mon: sm} : {intent:'unknown-mon', raw:m[1]};
+    }
+
     /* v67 precedence fix: the two-mon matchup pattern must run BEFORE the
        loose one-mon counters patterns, or "does X beat Y" gets eaten by
        `beat (.+)` and answered as counters-for-Y. Root cause = order. */
-    let m = t.match(/(?:does|can|will|would)\s+(.+?)\s+(?:beat|counter|kill|handle|check|win against)\s+(.+)/)
-         || t.match(/(.+?)\s+(?:vs\.?|versus)\s+(.+)/);
+    m = t.match(/(?:does|can|will|would)\s+(.+?)\s+(?:beat|counter|kill|handle|check|win against)\s+(.+)/)
+     || t.match(/(.+?)\s+(?:vs\.?|versus)\s+(.+)/);
     if(m){
       const a = resolveMon(m[1]), b = resolveMon(m[2]);
       if(a && b) return {intent:'matchup', a, b};
@@ -4911,9 +4965,39 @@ document.addEventListener('keydown', (e)=>{
     return {state:'answer', html:out};
   }
 
+  /* v69: sleepers — off-meta picks that execute the target's executioners.
+     Honesty rules: every claim traces to a board; the meta score is shown so
+     "sleeper" is a number, not a vibe; and limits get said out loud. */
+  function voiceSleepers(mon){
+    const picks = findSleepers(mon, {});
+    const N = esc(mon.speciesName);
+    if(!picks.length)
+      return {state:'shrug', html:`I inverted ${N}'s whole board and found no honest sleepers — everything that executes its killers is already meta. Sometimes the meta hasn't forgotten anything.`};
+    let out = `Sleepers for a <b>${N}</b> core — off-meta picks that hunt its hunters:<br>`;
+    picks.slice(0,3).forEach((p,i)=>{
+      const eats = p.eats.slice(0,3).map(e=>esc(e.name)).join(', ');
+      const msTxt = p.metaScore===null ? 'unranked by the meta' : 'meta score just '+p.metaScore;
+      out += `${i+1}. <b>${esc(p.mon.speciesName)}</b> (${msTxt}) — eats ${eats}<br>`;
+    });
+    out += `<span style="opacity:.75">Boards don't see XL costs, IVs, or your badge grind — field-test before you invest.</span>`;
+    return {state:'answer', html:out};
+  }
+
   function respond(text){
     say(esc(text), 'you');
     const p = parse(text);
+    // v69: sleeper hunting runs ~7 full-dex board scans — the one intent slow
+    // enough that the think state stops being decorative. Everything else
+    // stays synchronous; a spinner on fast work is a lie told with animation.
+    if(p.intent==='sleepers'){
+      setState('think');
+      setTimeout(()=>{
+        const r = voiceSleepers(p.mon);
+        setState(r.state);
+        say(r.html, 'coach');
+      }, 60);
+      return;
+    }
     let r;
     if(p.intent==='counters')      r = voiceCounters(p.mon);
     else if(p.intent==='squad')    r = voiceSquad();
@@ -4921,10 +5005,13 @@ document.addEventListener('keydown', (e)=>{
     else if(p.intent==='moveset')  r = voiceMoveset(p.mon);
     else if(p.intent==='opinion-squad') r = voiceOpinionSquad();
     else if(p.intent==='opinion-mon')   r = voiceOpinionMon(p.mon);
+    else if(p.intent==='sleepers')      r = voiceSleepers(p.mon);
+    else if(p.intent==='sleepers-squad')
+      r = {state:'shrug', html:`Squad-wide sleeper hunting is coming — v1 works per anchor. Pick your core mon and ask <b>sleepers for [that mon]</b>.`};
     else if(p.intent==='unknown-mon')
       r = {state:'shrug', html:`I don't know a mon called “${esc(p.raw)}” — check the spelling, or tap it in the deck and I'll follow along.`};
     else
-      r = {state:'shrug', html:`That one's outside what I can actually verify. I can answer these honestly: <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, <b>do you like [mon]</b>, and <b>is my squad good</b>. Anything else would be me guessing, and I don't guess.`};
+      r = {state:'shrug', html:`That one's outside what I can actually verify. I can answer these honestly: <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, <b>sleepers for [mon]</b>, <b>do you like [mon]</b>, and <b>is my squad good</b>. Anything else would be me guessing, and I don't guess.`};
     setState(r.state);
     say(r.html, 'coach');
   }
@@ -4934,7 +5021,7 @@ document.addEventListener('keydown', (e)=>{
     panel.classList.add('open');
     dock.classList.add('hidden');
     if(!log.children.length){
-      say(`I'm <b>Sprocket</b>. I run this app's real engine — same math as the boards, zero guesswork. Ask me <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, or <b>is my squad good</b>.`, 'coach');
+      say(`I'm <b>Sprocket</b>. I run this app's real engine — same math as the boards, zero guesswork. Ask me <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, <b>sleepers for [mon]</b>, or <b>is my squad good</b>.`, 'coach');
     }
   }
   function closePanel(){
