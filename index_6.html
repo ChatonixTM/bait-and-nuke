@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Bait &amp; Nuke</title>
+<meta name="app-version" content="v71-2026-08-09">
+<meta name="description" content="Bait & Nuke — the Pokémon GO PvP team builder that explains WHY. Best movesets, worst nightmares, shield pressure, and honest buff odds for every mon in GO Battle League.">
+<meta property="og:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
+<meta property="og:description" content="Search any Pokémon. See what to run, who beats you — and why. Turn-aware threat engine, honest buff chances, IV solver. Free, private, works offline.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://starlit-sunflower-f3e0cd.netlify.app">
+<meta property="og:site_name" content="Bait & Nuke">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Bait & Nuke 🎣💣 — PvP team builder that explains why">
+<meta name="twitter:description" content="Movesets, nightmares, and honest math for GO Battle League. Free, private, offline-ready.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="styles.css">
+</head>
+<script>document.documentElement.classList.add('js');</script>
+<body>
+<script>
+/* pre-paint theme restore: kills the dark flash on refresh */
+try{
+  var __ft = JSON.parse(localStorage.getItem('bn:recon-theme-fast')||'null');
+  if(__ft && __ft.vars){
+    var r = document.documentElement.style, v = __ft.vars;
+    r.setProperty('--bg',v.bg); r.setProperty('--panel',v.panel); r.setProperty('--panel-2',v.panel2);
+    r.setProperty('--line',v.line); r.setProperty('--text',v.text); r.setProperty('--text-dim',v.textDim);
+    r.setProperty('--signal',v.signal); r.setProperty('--signal-dim',v.signalDim);
+    r.setProperty('--amber',v.amber); r.setProperty('--glow-rgb',v.glow);
+  }
+}catch(e){}
+</script>
+<div class="pull-refresh" id="pullRefresh">
+  <div class="pr-line"></div>
+  <div class="pr-hook">🎣</div>
+  <div class="pr-text" id="prText">Pull to refresh</div>
+</div>
+<div class="update-banner" id="updateBanner">🔄 New version deployed — <b>tap to update</b></div>
+<div class="nojs-note" id="nojsNote"><b>⚠️ You're seeing a preview, not the app.</b> On iPhone, tapping this file in Files/Messages opens "Quick Look" — it shows how the app <i>looks</i> but can't run it, so search &amp; buttons won't work. To actually use it: open the file inside a free app like <b>Documents by Readdle</b>, open it in Chrome/Safari on a computer, or (best) host it at a real link. If the app is running properly, this note removes itself.</div>
+<div class="theme-mark" id="themeMark">
+  <div class="mark-inner" id="markInner">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle id="outerRing" class="outer-ring" cx="100" cy="100" r="96" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle id="pingRipple" class="ping-ripple" cx="100" cy="100" r="96" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="48" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="24" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="100" cy="100" r="5" fill="currentColor"/>
+      <line x1="100" y1="0"   x2="100" y2="52"  stroke="currentColor" stroke-width="1.5"/>
+      <line x1="100" y1="148" x2="100" y2="200" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="0"   y1="100" x2="52"  y2="100" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="148" y1="100" x2="200" y2="100" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M100 4 A96 96 0 0 1 196 100" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M100 196 A96 96 0 0 1 4 100" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+      <circle id="tapHitArea" class="tap-hit-area" cx="100" cy="100" r="96" fill="transparent"/>
+    </svg>
+  </div>
+</div>
+
+<div class="easter-caption" id="easterCaption"></div>
+
+<!-- Floating brand bar: appears on scroll, search bar pins beneath it -->
+<div class="float-brand" id="floatBrand" aria-hidden="true">
+  <div class="brand-wordmark"><span class="bw-emoji">🎣</span> <span class="bw-bait">Bait</span> <span class="bw-amp">&amp;</span> <span class="bw-nuke">Nuke</span> <span class="bw-emoji">💣</span></div>
+</div>
+
+<!-- Help (?) — future FAQ home -->
+<button class="help-fab" id="helpFab" aria-label="Help &amp; tips">?</button>
+<div class="help-backdrop" id="helpBackdrop"></div>
+<div class="help-panel" id="helpPanel">
+  <div class="hp-title">Help</div>
+  <button class="hp-tour" id="helpTourBtn">🎓 Take the 30-second tour</button>
+
+  <div class="hp-tip"><b>🎣 Bait</b> — the cheap charged move that pressures shields.</div>
+  <div class="hp-tip"><b>💣 Nuke</b> — the expensive charged move that ends things.</div>
+  <div class="hp-tip"><b>🔍 Search</b> — any Pokémon, typos auto-correct.</div>
+  <div class="hp-tip"><b>🏆 Live cup</b> — tap the cup name to filter to eligible Pokémon only.</div>
+  <div class="hp-tip"><b>🧩 Squad</b> — build teams of 3, analyze synergy, save &amp; share.</div>
+
+  <details class="hp-sec">
+    <summary>😱 Worst Nightmares — the three tiers</summary>
+    <div class="hp-note">Search a Pokémon to see its live board — the tiers are computed per-mon, per-league.</div>
+    <div class="hp-tip"><b>💀 Tier 1 — Hard Counters.</b> Type advantage <b>plus</b> real shield pressure: a cheap bait and fast energy. They force your shields early, then close. These are the ones that actually beat you.</div>
+    <div class="hp-tip"><b>🪨 Tier 2 — Grinders.</b> They outlast you and convert it. <i>No type advantage needed</i> — a bulky wall that resists you and chips away is still a nightmare. Slow, and inevitable.</div>
+    <div class="hp-tip"><b>🎲 Tier 3 — Coincidental.</b> Super-effective on paper, but no engine behind it. Beatable if you shield correctly.</div>
+    <div class="hp-tip"><b>Reading a card:</b> <b>⚡</b> shield pressure (1.00 = average; higher = forces shields faster) · <b>💥</b> damage per energy · <b>⏱</b> real seconds to charge their cheapest move · and the kit they actually run, with the fast move's turn length <b>(1T–5T)</b>.</div>
+    <div class="hp-tip"><b>⏳ Turn parity — the Rouge rule.</b> Two fast moves with identical energy-per-second are <i>not</i> the same weapon. Energy only lands when a fast move <i>finishes</i>, and mid-move you can't act — so a 1-turn move is a scalpel, a 4-turn move is a commitment. Bug Bite and Splash both make 6 energy/sec; Bug Bite reaches a 40-energy move two full turns sooner. The engine now sees the difference. <i>(Named for the one who caught it.)</i></div>
+    <div class="hp-tip"><b>🗂 Tap any nightmare</b> to open it as a <b>stacked tab</b> over your work — your squad stays exactly where it is. <b>←</b> minimizes it (it's recoverable), <b>×</b> closes it. Both need a short press-and-hold, so you can't nuke a tab by accident. <kbd>Esc</kbd> always backs out.</div>
+  </details>
+
+  <details class="hp-sec">
+    <summary>🧬 IVs &amp; CP — you only need one of them</summary>
+    <div class="hp-note">Search a Pokémon first — this section lives under its analysis.</div>
+    <div class="hp-tip"><b>IVs are optional.</b> It starts you on a realistic <b>8/11/11</b> spread, so you can ignore this entirely and still get honest numbers.</div>
+    <div class="hp-tip"><b>🔢 Only know your CP?</b> Tap <b>"I only know my CP"</b> and enter CP + level instead. It reverse-solves your IV spread from the real CP formula. If several spreads hit the same CP (common), it tells you how many and shows the most typical.</div>
+    <div class="hp-tip"><b>It corrects you.</b> Wrong level? It sweeps all 101 half-levels and auto-fixes it. Impossible CP for that species? It says so. Typo? It offers a <b>"did you mean…"</b>.</div>
+    <div class="hp-tip"><b>Skip near-perfect IVs in capped leagues.</b> A low Attack IV (0–5) with high Def/HP usually <i>outperforms</i> 15/15/15 — it levels further before the CP cap, meaning more real bulk. Does <b>not</b> apply to Master League, where 15/15/15 is genuinely correct.</div>
+  </details>
+
+  <details class="hp-sec">
+    <summary>🧩 Squad builder &amp; the Command Deck</summary>
+    <div class="hp-tip"><b>⠿ Reordering:</b> tap the handle on any squad member — it jumps to the top slot, and whoever was there shifts down one (the bottom wraps to the end). On desktop you can drag it instead.</div>
+    <div class="hp-tip"><b>The Command Deck</b> (the bar under the search box) <b>scrolls sideways</b> — swipe it. Add / ⚡ Analyze / League / Clear squad all live there. A <b>›</b> appears on the right when there's more to reach.</div>
+    <div class="hp-tip"><b>⚡ Analyze</b> unlocks at 2+ Pokémon and reads your squad against <i>this league's</i> power scale — Master League isn't judged by Great League's rules.</div>
+    <div class="hp-tip"><b>Add a mon</b> and the keyboard comes straight back up, cursor blinking, ready for the next one. Dismiss it with the <b>⌄</b> in the search box, or just swipe down with your thumb.</div>
+  </details>
+
+  <details class="hp-sec">
+    <summary>📱 Gestures &amp; the app itself</summary>
+    <div class="hp-tip"><b>🎣 Pull to cast.</b> Drag down from the top — properly, it's meant to resist — and release to refresh. It's a fishing line, not a button.</div>
+    <div class="hp-tip"><b>Scroll down fast</b> and the search box whips away like a tablecloth; the Command Deck stays put. Scroll up and it snaps back.</div>
+    <div class="hp-tip"><b>🎨 Themes</b> live in Profile. All five are tuned for long sessions — no harsh white panels, even on the light ones.</div>
+    <div class="hp-tip"><b>🔄 Updates.</b> When a new version goes live, a banner drops in at the top — tap it to reload. No app store, no download; it's the web.</div>
+    <div class="hp-tip"><b>Everything runs offline.</b> All 1,595 Pokémon and 333 moves are baked in. Nothing is sent anywhere.</div>
+  </details>
+
+  <button class="hp-egg" id="hpEggTease">
+    <span class="egg-text">Click <b>about</b> and you may be pleased with what you find</span>
+    <span class="egg-glints" aria-hidden="true"></span>
+  </button>
+  <div class="hp-egg-reveal" id="hpEggReveal">
+    There are a few things hidden around here — in the logo, in the footer, in a taunt or two.
+    Some are quick. One of them is <b>sacred</b>, and it takes patience to find.
+    <i>No hints beyond that. Go poke at things.</i> 🕵️‍♀️
+  </div>
+
+  <div class="hp-faq">FAQ</div>
+  <div class="hp-tip"><b>🎣💣 Two charged moves</b> — real PvP builds run a cheap <b>bait</b> to pressure shields and a bigger <b>nuke</b> to close. Pick both in the analyzer; the squad builder uses that exact combo.</div>
+  <button class="hp-tour" id="restoreTipsBtn">♻ Restore hidden tips</button>
+</div>
+
+<div class="wrap">
+<div class="page-grid">
+
+  <div class="main-content">
+
+  <div class="brand-wordmark"><span class="bw-emoji">🎣</span> <span class="bw-bait">Bait</span> <span class="bw-amp">&amp;</span> <span class="bw-nuke">Nuke</span> <span class="bw-emoji">💣</span></div>
+  <div class="eyebrow">recon // moveset analyzer</div>
+  <h1>Know your moveset before you build the team.</h1>
+  <p class="sub">Search any Pokémon. See what to run, who beats you — and <em>why</em>. Live roster &amp; moves synced from PvPoke's open data — free, private, works offline.</p>
+
+  <div class="pre-search-row">
+    <button class="tour-trigger" id="tourTrigger">🎓 New here? Take a 30-second tour</button>
+    <div class="cup-banner" id="cupBanner"></div>
+  </div>
+
+
+
+  <div class="tour-blocker" id="tourBlocker"></div>
+  <div class="tour-spotlight" id="tourSpotlight"></div>
+  <div class="tour-caption" id="tourCaption"></div>
+
+  <div class="search-shell">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" type="text" placeholder="Search a Pokémon… (typos welcome)" autocomplete="off">
+      <button class="kb-dismiss" id="kbDismiss" tabindex="-1" aria-label="Close keyboard">⌄</button>
+    </div>
+    <div class="suggestions" id="suggestions"></div>
+    <div class="deck-wrap" id="deckWrap">
+      <div class="quick-add-bar" id="quickAddBar"></div>
+      <div class="deck-chevron" aria-hidden="true">›</div>
+    </div>
+  </div>
+  <div class="status" id="status">Loading move data from PvPoke…</div>
+
+  <div class="result" id="result"></div>
+
+  <div class="analyze-bar" id="analyzeBar">
+    <button class="analyze-btn" id="analyzeBtn" disabled>Analyze squad synergy</button>
+    <select class="league-select" id="leagueSelect" title="Great = 1500 CP cap, Ultra = 2500, Master = no cap. Most new PvP players start in Great League.">
+      <option>Great League</option>
+      <option>Ultra League</option>
+      <option>Master League</option>
+    </select>
+  </div>
+
+  <div class="squad-panel" id="squadPanel">
+    <div class="section-label help-label" data-tip="Add up to 3 Pokémon here to build a team, see their combined synergy, and get a suggested battle order.">Squad builder — up to 3</div>
+    <div class="tip-dismiss" data-tip="squadReorderTip" id="squadReorderTip"><button class="tip-x" aria-label="Dismiss tip">×</button>
+      <b>Reordering:</b> tap the <b>⠿</b> handle on any Pokémon in your squad — it jumps straight to the top slot, and whoever was there shifts down one (the bottom slot wraps around to the end). On desktop you can also just drag it.
+    </div>
+    <div class="squad-slots" id="squadSlots"></div>
+    <div class="squad-actions">
+      <button class="save-btn" id="saveBtn" disabled>Save team</button>
+      <button class="clear-btn" id="clearBtn">Clear squad</button>
+      <button class="clear-btn" id="analyzeBtn2" disabled>Analyze squad</button>
+      <button class="share-btn" id="shareBtn" disabled>Share team</button>
+      <button class="import-btn" id="importBtn">Import a team</button>
+    </div>
+    <div class="share-box" id="shareBox"></div>
+    <div class="analysis" id="analysis"></div>
+    <div class="coverage-grid" id="coverageGrid"></div>
+    <div class="save-msg" id="saveMsg"></div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="brand-wordmark"><span class="bw-bait">Bait</span> <span class="bw-amp">&amp;</span> <span class="bw-nuke">Nuke</span> <span class="footer-inc">Inc.</span></div>
+    <p class="footer-copy">© <span id="footerYear"></span> <span class="chatonix">Chatonix.™ LLC</span> — makers of Bait &amp; Nuke. All rights reserved.</p>
+    <p class="footer-legal">Bait &amp; Nuke is an independent, fan-made tool and is not affiliated with, endorsed by, or sponsored by Niantic, Nintendo, Game Freak, or The Pokémon Company. Pokémon, Pokémon GO, and all related names are trademarks of their respective owners. Move and Pokémon data is sourced from PvPoke's open dataset. See <b>Profile → Privacy</b> for details on what's stored and where.</p>
+  </footer>
+
+  <!-- long-hold the footer to find this -->
+  <div class="jackpot-overlay" id="dedicationOverlay">
+    <div class="jackpot-panel dedi-panel">
+      <div class="dedi-head">💌 From the developer</div>
+      <p class="dedi-text">This application was made to help my girlfriend <b>“Rouge”</b> find good poké-combos to use on PoGo. I love seeing her smile — and she certainly deserves smooth sailing :D</p>
+      <p class="dedi-text">Also, a kudos to my big brother <b>Hax</b>. He put me onto mostly everything anime — I remember watching Buggy get chopped when I was 6.</p>
+      <p class="dedi-text">And thank <i>you</i> people as well. Have fun gaming on PoGo, and remember to lower your pride. However — that doesn't mean be a coward tho.</p>
+      <p class="dedi-text dedi-bless">Jesus loves you.</p>
+      <p class="dedi-sign">— Chatonix.™ LLC</p>
+      <div class="jp-actions">
+        <button class="jp-btn gold" id="dediClose">🤝 Much love</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+</div>
+
+<nav class="tab-bar">
+  <button class="tab-item" id="tabTeams">
+    <svg class="ti-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <circle cx="12" cy="5.2" r="2.1"/>
+      <circle cx="5.8" cy="17.2" r="2.1"/>
+      <circle cx="18.2" cy="17.2" r="2.1"/>
+      <path d="M12 7.3 L5.8 15.1 M12 7.3 L18.2 15.1 M6.8 17.2 L17.2 17.2"/>
+    </svg>
+    <span class="ti-label">Teams</span>
+  </button>
+  <button class="tab-item" id="tabProfile">
+    <svg class="ti-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <path d="M12 2.5 L19.5 5.5 V11 C19.5 15.8 16.4 19 12 20.8 C7.6 19 4.5 15.8 4.5 11 V5.5 Z"/>
+      <circle cx="12" cy="9.6" r="2.15"/>
+      <path d="M8.2 15.6c0.9-1.9 2.3-2.8 3.8-2.8s2.9 0.9 3.8 2.8"/>
+    </svg>
+    <span class="ti-label">Profile</span>
+  </button>
+</nav>
+
+<div class="profile-overlay" id="profileOverlay">
+  <div class="profile-sheet">
+    <div class="profile-sheet-head">
+      <h3>Profile</h3>
+      <button class="vip-close" id="profileClose" aria-label="Close">✕</button>
+    </div>
+
+    <div class="profile-row" data-section="account">
+      <span class="pr-icon">👤</span><span class="pr-label">Account</span><span class="pr-chev">›</span>
+    </div>
+    <div class="profile-section" id="profileAccountSection">
+      <div class="acct-row">
+        <div class="acct-icon" id="acctIcon">♟</div>
+        <div>
+          <div class="acct-tier-name" id="acctTierName">Free</div>
+          <div class="acct-tier-sub" id="acctTierSub">0 saved teams</div>
+        </div>
+      </div>
+      <div class="acct-actions">
+        <button class="acct-btn" id="acctManageBtn">Manage membership</button>
+        <button class="acct-btn ghost" id="acctResetBtn">Reset demo account</button>
+      </div>
+    </div>
+
+    <div class="profile-row" data-section="settings">
+      <span class="pr-icon">⚙</span><span class="pr-label">Settings</span><span class="pr-chev">›</span>
+    </div>
+    <div class="profile-section" id="profileSettingsSection">
+      <div class="theme-row" id="themeRow">
+        <span class="tr-label">Theme</span>
+      </div>
+    </div>
+
+    <div class="profile-row" data-section="privacy">
+      <span class="pr-icon">🔒</span><span class="pr-label">Privacy</span><span class="pr-chev">›</span>
+    </div>
+    <div class="profile-section" id="profilePrivacySection">
+      <p class="privacy-text">Everything here runs in your browser. Your squad, saved teams, and tier selection are stored locally to your account on this tool — nothing is sold or shared. There are no exceptions: squad analysis runs entirely on your device, and nothing you do here leaves it.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="vip-overlay" id="vipOverlay">
+  <div class="vip-panel">
+
+    <div class="vip-topbar">
+      <div>
+        <div class="vip-eyebrow">♛ members-only vault</div>
+        <h2>Saved Teams</h2>
+      </div>
+      <button class="vip-close" id="vipClose" aria-label="Close">✕</button>
+    </div>
+
+    <div class="vip-scroll">
+
+      <div class="tier-status-banner" id="tierStatusBanner">
+        <div class="tsb-icon" id="tsbIcon">♟</div>
+        <div class="tsb-text">
+          <div class="tsb-eyebrow">Current access</div>
+          <div class="tsb-name" id="tsbName">Free</div>
+        </div>
+        <svg class="tsb-wave" viewBox="0 0 500 40" preserveAspectRatio="none">
+          <path d="M0,22 C90,40 160,4 250,18 C340,32 410,2 500,20 L500,40 L0,40 Z" style="fill:var(--panel);"/>
+        </svg>
+      </div>
+
+      <div class="tier-cards" id="tierCards">
+        <button class="tier-card" data-tier="free">
+          <div class="tc-icon">♟</div>
+          <div class="tc-name">Free</div>
+          <div class="tc-perk">0 saves</div>
+        </button>
+        <button class="tier-card" data-tier="scout">
+          <div class="tc-icon">♜</div>
+          <div class="tc-name">Scout</div>
+          <div class="tc-perk">1 save/league</div>
+        </button>
+        <button class="tier-card" data-tier="vanguard">
+          <div class="tc-icon">♛</div>
+          <div class="tc-name">Vanguard</div>
+          <div class="tc-perk">3 saves/league</div>
+        </button>
+      </div>
+      <div class="tier-demo-note">demo — real billing needs a backend</div>
+
+      <div class="tier-feature-list" id="tierFeatureList"></div>
+
+      <button class="tier-cta" id="tierCta">Don't lose your progress — join here</button>
+
+      <div id="vipBody">
+        <div class="vip-loading" id="vipLoading" style="display:none;"></div>
+        <div id="savedTeams"></div>
+      </div>
+    </div>
+
+    <div class="vip-bottombar">
+      <span class="vip-bottombar-status" id="vipTierStatus">Free member</span>
+      <button class="vip-bottombar-close" id="vipCloseBottom">Close</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

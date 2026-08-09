@@ -4103,15 +4103,21 @@ function renderAccountPanel(){
 }
 
 function openProfile(){
+  if(PROFILE_OVERLAY.classList.contains('show')) return;   // v71: idempotent
   renderAccountPanel();
   PROFILE_OVERLAY.classList.add('show');
   TAB_PROFILE.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  // v71: body overflow:hidden is ignored by iOS touch scrolling — the
+  // founder could still scroll the page behind this sheet. Use the app's
+  // refcounted, position:fixed lock (same one the mon tabs trust).
+  lockBodyScroll(true);
 }
 function closeProfile(){
+  if(!PROFILE_OVERLAY.classList.contains('show')) return;  // v71: guard — a
+  // blind close must never decrement a lock some OTHER panel is holding
   PROFILE_OVERLAY.classList.remove('show');
   TAB_PROFILE.classList.remove('open');
-  document.body.style.overflow = '';
+  lockBodyScroll(false);
   // Reset accordion so Profile always opens fresh, nothing left expanded from last time.
   setTimeout(()=>{
     document.querySelectorAll('.profile-row').forEach(r=>r.classList.remove('open'));
@@ -4176,9 +4182,10 @@ function updateVipTierStatus(){
 }
 
 function openVip(){
-  closeProfile();
+  if(VIP_OVERLAY.classList.contains('show')) return;       // v71: idempotent
+  closeProfile();   // safe now: guarded no-op when profile isn't open
   VIP_OVERLAY.classList.add('show');
-  document.body.style.overflow = 'hidden';
+  lockBodyScroll(true);
   const msg = VAULT_MESSAGES[Math.floor(Math.random()*VAULT_MESSAGES.length)];
   VIP_LOADING.innerHTML = `<span class="scan-dot" style="display:inline-block;"></span><br>${msg}`;
   VIP_LOADING.style.display = 'block';
@@ -4192,8 +4199,9 @@ function openVip(){
 }
 
 function closeVip(){
+  if(!VIP_OVERLAY.classList.contains('show')) return;      // v71: guard
   VIP_OVERLAY.classList.remove('show');
-  document.body.style.overflow = '';
+  lockBodyScroll(false);
 }
 
 TAB_TEAMS.addEventListener('click', openVip);
@@ -4785,8 +4793,11 @@ function findSleepers(X, opts){
     if(/(^|\b)(is my (squad|team)|rate my|how('s| is| good is) my (squad|team)|squad check|team check|my (squad|team) (good|any good|ok|okay))\b/.test(t))
       return {intent:'squad'};
 
-    // v69: sleeper finder — "sleepers for tinkaton", "find sleeper partners for X"
-    let m = t.match(/(?:find\s+)?sleepers?(?:\s+(?:picks?|partners?|tech))?\s+(?:for|with|around|vs)\s+(.+)/);
+    // v69: sleeper finder. v70: hears every dialect the founder actually types —
+    // "sleepers for X", "sleepers 4 X", "sleeper X", "X sleepers", "X sleep",
+    // "find me sleepers X". Leading and trailing forms both resolve.
+    let m = t.match(/^(?:find\s+)?(?:me\s+)?(?:some\s+)?sleepers?(?:\s+(?:picks?|partners?|tech))?(?:\s+(?:4|for|with|around|vs|on))?\s+(.+)$/)
+         || t.match(/^(.+?)\s+sleep(?:ers?)?$/);
     if(m){
       if(/^(?:my\s+)?(?:squad|team)$/.test(m[1].trim()))
         return {intent:'sleepers-squad'};
@@ -5018,15 +5029,21 @@ function findSleepers(X, opts){
 
   /* ---------- wiring ------------------------------------------------------ */
   function openPanel(){
+    if(panel.classList.contains('open')) return;           // v71: idempotent
     panel.classList.add('open');
     dock.classList.add('hidden');
+    // v71: founder's call — background stays PUT while talking to Sprocket.
+    // Uses the app's refcounted lock; the locktest watchdog covers us.
+    lockBodyScroll(true);
     if(!log.children.length){
       say(`I'm <b>Sprocket</b>. I run this app's real engine — same math as the boards, zero guesswork. Ask me <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, <b>sleepers for [mon]</b>, or <b>is my squad good</b>.`, 'coach');
     }
   }
   function closePanel(){
+    if(!panel.classList.contains('open')) return;          // v71: guard
     panel.classList.remove('open');
     dock.classList.remove('hidden');
+    lockBodyScroll(false);
   }
   dock.addEventListener('click', openPanel);
   panel.querySelector('#coachClose').addEventListener('click', closePanel);
