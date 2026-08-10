@@ -23,8 +23,18 @@ const { chromium } = require('playwright');
     const i=document.querySelector('.sprite-hero'); return i && /animated\/184\.gif/.test(i.src) && i.naturalWidth>0;}));
   await page.evaluate(()=>renderResult(POKEMON.find(p=>p.speciesId==='skeledirge')));
   await page.waitForTimeout(1500);
-  t('dex>649 (Skeledirge) uses static png', await page.evaluate(()=>{
-    const i=document.querySelector('.sprite-hero'); return i && /\/pokemon\/911\.png/.test(i.src);}));
+  // NOTE (Susano'o, 2026-08-09): v55 changed this. Modern mons (dex>649) now get
+  // Pokémon Showdown's ANIMATED set as the primary src, with the PokeAPI static
+  // PNG wired as the graceful data-static fallback (see app.js spriteImg, the
+  // v55 comment). The old assertion expected static-png primary (v52 behavior)
+  // and was never updated — app is right, test was stale. Verified against the
+  // shipped code. Checking spriteImg() output directly so this is deterministic
+  // and network-free (a DOM .src check would flake if Showdown is unreachable in
+  // CI, since onerror would swap src to the png fallback).
+  t('dex>649 (Skeledirge) → Showdown animated primary + png fallback (v55)', await page.evaluate(()=>{
+    const html = spriteImg(POKEMON.find(p=>p.speciesId==='skeledirge'), 72, 'sprite-hero');
+    return /src="https:\/\/play\.pokemonshowdown\.com\/sprites\/ani\/skeledirge\.gif"/.test(html)
+        && /data-static="https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/pokemon\/911\.png"/.test(html);}));
   t('broken animated falls back to static (chain works)', await page.evaluate(async ()=>{
     const d=document.createElement('div');
     d.innerHTML='<img class="sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/999999.gif" data-static="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/184.png" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}">';

@@ -20,7 +20,12 @@ const { chromium } = require('playwright');
 
   // v63: past the end of the encoded schedule, the banner must admit it
   //      rather than showing a dead cup as if it were live.
-  for(const [when, expectStale] of [['2026-08-03T12:00:00Z', false], ['2026-08-20T12:00:00Z', true]]){
+  // NOTE (Susano'o, 2026-08-09): the stale probe MUST sit past CUP_SCHEDULE_END
+  //      (2026-09-08). v64 extended the horizon from ~Aug 4 to Sep 8; the old
+  //      probe date 2026-08-20 now lands INSIDE the live window (Scroll Cup,
+  //      Aug 18-25), so the app correctly reports stale=false there. Moved the
+  //      stale case to 2026-09-20 to keep testing real staleness, not soften it.
+  for(const [when, expectStale] of [['2026-08-03T12:00:00Z', false], ['2026-09-20T12:00:00Z', true]]){
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     await page.addInitScript(`{const t=${Date.parse(when)};Date.now=()=>t;}`);

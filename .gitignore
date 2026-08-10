@@ -1,0 +1,8 @@
+# Local test-bench dependencies — never commit these.
+# CI installs them fresh via `npm install` on every run.
+node_modules/
+package-lock.json
+
+# Playwright browser downloads live outside the repo, but just in case:
+/test-results/
+/playwright-report/
