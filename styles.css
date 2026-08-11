@@ -2639,6 +2639,11 @@
   border:1px solid var(--line,#1f2a35);border-bottom-left-radius:4px}
 .coach-good{color:var(--signal,#4de8c9);font-weight:700}
 .coach-bad{color:var(--amber,#ffb454);font-weight:700}
+/* Sprocket Confidence Gear (Upgrade #1) — tags earned from the engine, never decorative */
+.conf{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.03em;padding:1px 6px;border-radius:5px;margin-right:5px;vertical-align:baseline;text-transform:uppercase;white-space:nowrap}
+.conf-high{color:var(--signal,#4de8c9);background:rgba(77,232,201,.14)}
+.conf-lean{color:var(--amber,#ffb454);background:rgba(255,180,84,.15)}
+.conf-cant{color:#8b97a7;background:rgba(139,151,167,.14)}
 
 .coach-chips{display:flex;gap:8px;padding:0 12px 8px;flex-wrap:wrap}
 .coach-chip{font-size:11.5px;padding:6px 10px;border-radius:20px;cursor:pointer;

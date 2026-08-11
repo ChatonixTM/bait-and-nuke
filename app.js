@@ -698,7 +698,8 @@ function pickDefaultLoadout(mon, fastList, chargedList){
     const dpe = eff / Math.max(1, c.energy || 1);
     return eff + dpe * 12 + buffValue(c);
   };
-  const nuke = [...chargedList].sort((a,b)=>nukeScore(b)-nukeScore(a))[0];
+  const nukeSorted = [...chargedList].sort((a,b)=>nukeScore(b)-nukeScore(a));
+  const nuke = nukeSorted[0];
 
   // BAIT — cheap energy still leads, but STAB, real buff value, damage-per-energy,
   // and type coverage vs the nuke all break ties. A cheap move that ALSO shaves
@@ -732,7 +733,14 @@ function pickDefaultLoadout(mon, fastList, chargedList){
     });
   });
 
-  return {fast: bestFast, bait, nuke};
+  // Confidence signal: how clear is the top nuke over the runner-up? A real
+  // margin, not a vibe — so voiceMoveset can say "high read" only when earned.
+  let conf = 'high';
+  if(nukeSorted.length >= 2){
+    const s1 = nukeScore(nukeSorted[0]), s2 = nukeScore(nukeSorted[1]);
+    conf = (s1 > 0 && (s1 - s2) / s1 < 0.12) ? 'leaning' : 'high';   // <12% apart = close call
+  }
+  return {fast: bestFast, bait, nuke, conf};
 }
 
 function buildLoadoutEntry(mon, fast, bait, nuke, ivs){
@@ -4879,7 +4887,10 @@ function findSleepers(X, opts){
     if(typeof squad !== 'undefined' && squad.some(e=>e.speciesId === mon.speciesId)){
       out += ` It's on <b>your squad</b> right now — if you see ${wName} in the lead, don't feed it your ${esc(mon.speciesName)}.`;
     }
-    return {state:'answer', html:out};
+    // confidence from the real board: a Tier-1 hard counter (or a clearly clean
+    // board) is a decisive read; a grind-only board hinges on shields = leaning.
+    const conf = t1.length ? 'high' : (board.some(k=>k.tier===2) ? 'leaning' : 'high');
+    return {state:'answer', html:out, conf};
   }
 
   function voiceSquad(){
@@ -4895,7 +4906,9 @@ function findSleepers(X, opts){
     } else if(r.order){
       out += `Order I'd run: <b>${r.order.map(o=>esc(o.name)).join(' → ')}</b>.`;
     }
-    return {state:'answer', html:out};
+    // full 3/3 read = high; a partial bench is an honest leaning (the score says so).
+    const conf = (typeof squad!=='undefined' && squad.length===3) ? 'high' : 'leaning';
+    return {state:'answer', html:out, conf};
   }
 
   /* v67: matchup — answered by cross-referencing the REAL nightmare boards
@@ -4906,21 +4919,22 @@ function findSleepers(X, opts){
     const aOnB = bBoard.find(k=>k.c.speciesId===a.speciesId);
     const bOnA = aBoard.find(k=>k.c.speciesId===b.speciesId);
     const A = esc(a.speciesName), B = esc(b.speciesName);
-    let out;
+    let out, conf = 'leaning';
     if(aOnB && (!bOnA || aOnB.tier < bOnA.tier)){
       out = `<b>${A} wins.</b> It sits at Tier ${aOnB.tier} on ${B}'s own nightmare board` +
             (aOnB.viaType ? ` — the pressure comes through <b>${esc(String(aOnB.viaType))}</b>.` : '.');
-      if(aOnB.tier===1) out += ` That's a hard counter; ${B} shouldn't stay in.`;
+      if(aOnB.tier===1){ out += ` That's a hard counter; ${B} shouldn't stay in.`; conf = 'high'; }
     } else if(bOnA && (!aOnB || bOnA.tier < aOnB.tier)){
       out = `<b>${B} wins.</b> It's Tier ${bOnA.tier} on ${A}'s nightmare board` +
             (bOnA.viaType ? ` — through <b>${esc(String(bOnA.viaType))}</b>.` : '.');
-      if(bOnA.tier===1) out += ` ${A} should never take this fight.`;
+      if(bOnA.tier===1){ out += ` ${A} should never take this fight.`; conf = 'high'; }
     } else if(aOnB && bOnA){
       out = `They threaten <b>each other</b> — both appear on each other's boards at Tier ${aOnB.tier}. This one comes down to shields and who charges first.`;
     } else {
       out = `Neither hard-counters the other — the engine doesn't put either on the other's nightmare board. It'll come down to <b>shields, energy, and who baits better</b>. Even fight; play it clean.`;
     }
-    return {state:'answer', html:out};
+    // a Tier-1 verdict on a real board is decisive; "comes down to shields" / even = leaning.
+    return {state:'answer', html:out, conf};
   }
 
   /* v67: moveset — pickDefaultLoadout, but YOUR kit if the mon is seated
@@ -4941,7 +4955,9 @@ function findSleepers(X, opts){
     if(kit.nuke) out += `, nuke <b>${esc(nm(kit.nuke))}</b>`;
     out += '.';
     if(!seated && kit.bait && kit.nuke) out += ` Bait with the cheap one, close with the big one — that's the whole game.`;
-    return {state:'answer', html:out};
+    // seated = your own set (a fact, not a read); engine pick = confidence from the nuke margin.
+    const conf = seated ? 'high' : (kit.conf || 'leaning');
+    return {state:'answer', html:out, conf};
   }
 
   /* v67: opinion — personality strictly ON TOP of real numbers. Sprocket
@@ -4960,7 +4976,7 @@ function findSleepers(X, opts){
     const k0=(r.risks||[])[0];
     if(sc<65 && k0) out += `<br>The thing dragging it down: ${k0}`;
     else { const s0=(r.strengths||[])[0]; if(s0) out += `<br>What's carrying: ${s0}`; }
-    return {state:'answer', html:out};
+    return {state:'answer', html:out, conf:'opinion'};   // opinion is a read, never engine-verified truth
   }
 
   function voiceOpinionMon(mon){
@@ -4973,7 +4989,7 @@ function findSleepers(X, opts){
     else            out = `<b>${N}... look, I won't lie to you.</b> It has ${t1} hard counters, starting with <b>${esc(board[0].c.speciesName)}</b>. It gets deleted a lot. Run it for love, not for wins.`;
     if(typeof squad!=='undefined' && squad.some(e=>e.speciesId===mon.speciesId))
       out += ` And yes, I see it on your squad. My opinion stands.`;
-    return {state:'answer', html:out};
+    return {state:'answer', html:out, conf:'opinion'};
   }
 
   /* v69: sleepers — off-meta picks that execute the target's executioners.
@@ -4991,7 +5007,28 @@ function findSleepers(X, opts){
       out += `${i+1}. <b>${esc(p.mon.speciesName)}</b> (${msTxt}) — eats ${eats}<br>`;
     });
     out += `<span style="opacity:.75">Boards don't see XL costs, IVs, or your badge grind — field-test before you invest.</span>`;
-    return {state:'answer', html:out};
+    // high read only when the top sleeper clears the bar with room: executes 3+ of the
+    // target's killers AND sits genuinely off-meta. A 2-killer / near-ceiling pick = leaning.
+    const top = picks[0];
+    const conf = (top.eats.length >= 3 && (top.metaScore === null || top.metaScore < 60)) ? 'high' : 'leaning';
+    return {state:'answer', html:out, conf};
+  }
+
+  /* Confidence Gear (Sprocket Upgrade #1): a tag DERIVED from the engine's own
+     output — high read / leaning / can't verify. Never decorative: 'high' fires
+     only when a handler earned it from a real signal (board tier, squad
+     completeness, nuke margin, sleeper kill-count). A shrug is 'can't verify'. */
+  function confTag(conf){
+    if(conf==='high')    return `<span class="conf conf-high">▮ high read</span> `;
+    if(conf==='leaning') return `<span class="conf conf-lean">▮ leaning</span> `;
+    if(conf==='opinion') return `<span class="conf conf-lean">▮ leaning · opinion</span> `;
+    if(conf==='cant')    return `<span class="conf conf-cant">▮ can’t verify</span> `;
+    return '';
+  }
+  function emit(r){
+    setState(r.state);
+    const conf = r.conf || (r.state==='shrug' ? 'cant' : null);
+    say(confTag(conf) + r.html, 'coach');
   }
 
   function respond(text){
@@ -5002,11 +5039,7 @@ function findSleepers(X, opts){
     // stays synchronous; a spinner on fast work is a lie told with animation.
     if(p.intent==='sleepers'){
       setState('think');
-      setTimeout(()=>{
-        const r = voiceSleepers(p.mon);
-        setState(r.state);
-        say(r.html, 'coach');
-      }, 60);
+      setTimeout(()=>{ emit(voiceSleepers(p.mon)); }, 60);
       return;
     }
     let r;
@@ -5023,8 +5056,7 @@ function findSleepers(X, opts){
       r = {state:'shrug', html:`I don't know a mon called “${esc(p.raw)}” — check the spelling, or tap it in the deck and I'll follow along.`};
     else
       r = {state:'shrug', html:`That one's outside what I can actually verify. I can answer these honestly: <b>who beats [mon]</b>, <b>[mon] vs [mon]</b>, <b>moves for [mon]</b>, <b>sleepers for [mon]</b>, <b>do you like [mon]</b>, and <b>is my squad good</b>. Anything else would be me guessing, and I don't guess.`};
-    setState(r.state);
-    say(r.html, 'coach');
+    emit(r);
   }
 
   /* ---------- wiring ------------------------------------------------------ */
