@@ -4747,10 +4747,11 @@ function findSleepers(X, opts){
     <div class="coach-chips" id="coachChips">
       <button class="coach-chip" data-q="is my squad good?">Rate my squad</button>
       <button class="coach-chip" data-q="who beats azumarill?">Who beats Azumarill?</button>
+      <button class="coach-chip" data-q="sleepers for azumarill?">🔍 Find a sleeper</button>
     </div>
     <form class="coach-inputrow" id="coachForm">
       <input id="coachInput" type="text" autocomplete="off" enterkeyhint="send"
-             placeholder="who beats azumarill? · is my squad good?">
+             placeholder="who beats azumarill? · sleepers for azumarill?">
       <button type="submit" class="coach-send" aria-label="Ask">➤</button>
     </form>`;
 
