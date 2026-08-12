@@ -1542,7 +1542,13 @@
   #secretDex{display:none;position:fixed;inset:0;z-index:1400;background:rgba(13,10,8,.97);
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px 14px 40px;}
   #secretDex.show{display:block;}
-  .sdex-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  /* v73: pin the header so the ✕ stays reachable top-right no matter how far you
+     scroll (was riding away — a long scroll back up from Dragapult to exit). Pure
+     CSS sticky, no JS coords. Negative margins span the overlay's padding for a
+     flush, opaque bar; z-index keeps it above the grid. */
+  .sdex-head{display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:5;margin:-18px -14px 8px;padding:16px 14px 10px;
+    background:rgba(13,10,8,.97);}
   .sdex-title{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--signal);letter-spacing:.06em;}
   .sdex-close{background:none;border:1px solid var(--signal-dim);border-radius:50%;width:34px;height:34px;
     color:var(--text);font-size:16px;cursor:pointer;flex:0 0 auto;}
