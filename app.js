@@ -3978,8 +3978,18 @@ function openSecretDex(){
     dex.id = 'secretDex';
     const seen = new Map();
     POKEMON.forEach(p => { if(p.dex && !seen.has(p.dex)) seen.set(p.dex, p.speciesName.replace(/\s*\(.*\)$/,'')); });
-    const cells = [...seen.entries()].sort((a,b)=>a[0]-b[0]).map(([d,n]) =>
-      `<div class="sdex-cell" data-d="${d}" data-n="${escName(n)}"><img loading="lazy" src="${d<=649?'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/'+d+'.gif':'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+d+'.png'}" alt="" data-static="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d}.png" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}"><div>#${d} ${escName(n)}</div></div>`).join('');
+    const cells = [...seen.entries()].sort((a,b)=>a[0]-b[0]).map(([d,n]) => {
+      // v72: the Secret Dex used to go STATIC after #649 (Genesect) — it never got the
+      // main app's v55 animated fix. Now post-Genesect mons use Pokémon Showdown's
+      // animated set (slug from the base name), matching spriteImg(); any miss falls
+      // to the static PNG, then vanishes. No broken icons, ever.
+      const slug = n.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const staticSrc = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+d+'.png';
+      const src = d<=649
+        ? 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/'+d+'.gif'
+        : (slug ? 'https://play.pokemonshowdown.com/sprites/ani/'+slug+'.gif' : staticSrc);
+      return `<div class="sdex-cell" data-d="${d}" data-n="${escName(n)}"><img loading="lazy" src="${src}" alt="" data-static="${staticSrc}" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}"><div>#${d} ${escName(n)}</div></div>`;
+    }).join('');
     dex.innerHTML = `<div class="sdex-head"><span class="sdex-title">🥚 THE SECRET DEX</span><button class="sdex-close" aria-label="Close">×</button></div>
       <div class="sdex-sub">${seen.size} mons · tap a face for the big artwork · you found this. — for Shadow &amp; Rouge</div>
       <div class="sdex-grid">${cells}</div><div id="sdexBig"><img id="sdexBigImg" alt=""><span id="sdexBigName"></span></div>`;
