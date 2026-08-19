@@ -12,7 +12,22 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(400);
   t('typing the word summons the Dex', await page.evaluate(()=>document.getElementById('secretDex')?.classList.contains('show')));
   t('search bar cleared (secret stays secret)', await page.evaluate(()=>SEARCH.value===''));
-  t('grid holds all 946', await page.evaluate(()=>document.querySelectorAll('.sdex-cell').length===946));
+  /* ⚠ THIS USED TO READ `=== 946` AND IT BROKE THE FIRST TIME THE ROSTER GREW.
+     946 was the unique-dex-number count on the day it was written; the Aug-19
+     roster sync added 79 new species (Ditto #132, Phione, Manaphy, Arceus,
+     Type: Null / Silvally, Terapagos, Pecharunt…) and the assertion failed on
+     CORRECT data. A hard-coded expectation over derived data is a test that
+     fails on every improvement and passes on none. So: derive the expectation
+     from the same data the grid is built from, and separately assert the Dex
+     NEVER SHRINKS below its historical floor — which is the regression this
+     check actually exists to catch. */
+  const dexCounts = await page.evaluate(()=>{
+    const s=new Set(); POKEMON.forEach(p=>{ if(p.dex) s.add(p.dex); });
+    return { grid: document.querySelectorAll('.sdex-cell').length, species: s.size };
+  });
+  t(`grid holds every species in the data (${dexCounts.grid})`, dexCounts.grid === dexCounts.species,
+    dexCounts.grid === dexCounts.species ? '' : `grid ${dexCounts.grid} vs data ${dexCounts.species}`);
+  t('the Dex never shrinks (floor 946, set Aug 2026)', dexCounts.grid >= 946, `now ${dexCounts.grid}`);
   t('body locked while browsing', await page.evaluate(()=>document.body.classList.contains('tabs-open')));
   await page.evaluate(()=>{ document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus')); });
   t('watchdog respects the open Dex', await page.evaluate(()=>document.body.classList.contains('tabs-open') && document.getElementById('secretDex').classList.contains('show')));

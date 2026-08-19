@@ -12,7 +12,19 @@ const t=(n,c,x)=>{c?pass++:fail++;console.log((c?'✅':'❌ FAIL'),n,x?'— '+x:
 // 1. Data present and additive (must not have damaged existing data)
 t('moveFlags present', !!gm.moveFlags && Object.keys(gm.moveFlags).length > 300,
   Object.keys(gm.moveFlags||{}).length + ' mons flagged');
-t('existing data untouched', gm.pokemon.length===1595 && Object.keys(gm.moves).length===333 && !!gm.typeChart && !!gm.metaScores);
+/* ⚠ THIS USED TO PIN THE EXACT COUNTS (1595 pokemon / 333 moves) AND IT FAILED
+   THE FIRST TIME THE ROSTER LEGITIMATELY GREW — the Aug-19 sync brought the
+   file to 1740 / 347, adding 145 mons and 14 moves and removing NOTHING. What
+   this check is actually for is "adding moveFlags did not damage the rest of
+   the file", so it asserts the two things that would prove damage: the roster
+   NEVER SHRINKS below its recorded floor, and the derived tables are still
+   there. A frozen equality over data designed to grow reports a green house as
+   broken, and it trains you to edit the number instead of reading the diff. */
+const FLOOR = { pokemon: 1595, moves: 333 };   // Aug 2026; only ever raise it
+t('existing data untouched — nothing dropped, derived tables intact',
+  gm.pokemon.length >= FLOOR.pokemon && Object.keys(gm.moves).length >= FLOOR.moves
+  && !!gm.typeChart && !!gm.metaScores,
+  `${gm.pokemon.length} pokemon (floor ${FLOOR.pokemon}) · ${Object.keys(gm.moves).length} moves (floor ${FLOOR.moves})`);
 
 // 2. Known real-game facts (verified against actual Pokemon GO)
 const isElite=(id,mv)=>!!(gm.moveFlags[id]&&(gm.moveFlags[id].e||[]).includes(mv));
