@@ -110,12 +110,20 @@ const mapMove = m => {
    to its previous self.
 
    ⚠ CORRECTED Aug 19 2026: this comment said "184 of the 333" and "more than
-   half the move pool". BOTH WERE WRONG — the number was never counted. The
-   shipped gamemaster.json carries 86, confirmed two independent ways: counting
-   the `buff` field, and summing the Debuff / Boost Nuke / Boost Spam / Boost /
-   Debuff Nuke / Debuff Spam / Self-Debuff* archetype families, which come to
-   exactly 86 as well. That agreement is the check — one count could be a bug,
-   two counts from unrelated fields agreeing is the answer.
+   half the move pool". BOTH WERE WRONG — the number was never counted. The file
+   carried 86, confirmed two independent ways: counting the `buff` field, and
+   summing the Debuff / Boost Nuke / Boost Spam / Boost / Debuff Nuke / Debuff
+   Spam / Self-Debuff* archetype families, which come to exactly 86 as well.
+   That agreement is the check — one count could be a bug, two counts from
+   unrelated fields agreeing is the answer.
+
+   ⚠ AND THE FIGURE IS PINNED, because this script is what moves it. "86 of
+   333" is gamemaster.json at commit d4c137a^ — BEFORE this sync ran. After it:
+   97 of 347. The first draft of this very correction was written in the present
+   tense while the sync had already changed the file, so a reader checking it
+   against the live data would have found 97 and concluded the correction was
+   the error. A number about a file that a script rewrites MUST carry the commit
+   it was taken at.
      node -e "const g=require('./gamemaster.json');const m=Object.values(g.moves);
               console.log(m.filter(x=>x.buff).length,'of',m.length)"
    The defect this comment describes was real and worth catching. The size of
