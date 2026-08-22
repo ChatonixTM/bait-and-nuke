@@ -462,6 +462,168 @@ function rankOneSpread(baseStats, league){
   return { league, cap, best, hundo, hundoGap };
 }
 
+// ---- SMART LEAGUE SWITCHER -------------------------------------------------
+// Founder, Aug 22 2026, after peaking at 1854 with a squad he built blind:
+//
+//   "when you're inputting a team, and their limits are below a leagues cap
+//    (morpeko for example or Altria - ultra league) we should have Bait&Nuke
+//    automatically smartly indicate we may be in the wrong league"
+//
+// He is describing a HARD ceiling, and it is fully derivable. Every species has
+// a maximum CP it can ever reach — 15/15/15 at the top level — and if that
+// number is below a league's cap, no amount of stardust, XL candy or IV luck
+// will ever get it to the cap. It is not a weak pick. It is a pick that cannot
+// legally arrive at full size.
+//
+// MEASURED on his own squad, and he was right twice over:
+//   Morpeko (Full Belly)  ceiling 2222  — Ultra's cap is 2500, short by 278
+//   Cramorant             ceiling 2450  — short by 50
+//   Meowscarada           ceiling 3231  — fits
+//   Altaria               ceiling 2293  — his other example, also short
+//
+// ⚠ THE MATH WAS PROVED AGAINST ANSWERS THE WHOLE PLAYERBASE ALREADY KNOWS
+// BEFORE IT WAS POINTED AT ANYTHING NEW: Mewtwo tops out at 4724 and Slaking at
+// 5010 — both reproduced exactly. A new instrument does not get to report a
+// number until it has been run against one somebody can check.
+const LVL_IDX = { 40: 78, 50: 98, 51: 100 };   // CPM_TABLE is half-levels from L1
+
+// ⚠ THE CEILING IS TAKEN AT LEVEL 50, NOT 51, AND THE REASON IS A REAL-WORLD ONE.
+// Level 51 needs Best Buddy — and only ONE Pokémon can be your buddy at a time,
+// so at most one member of a three-mon squad can ever stand at 51. Quoting a
+// squad-wide ceiling at a level two of three cannot hold simultaneously is a
+// number that is true of nobody's actual team.
+// ⭐ AND IT MAKES THE PROOF AND THE PRODUCT THE SAME NUMBER. Obito caught the
+// earlier version asserting Mewtwo 4724 / Slaking 5010 — which verify level 50 —
+// while every figure rendered to the founder came from level 51, a path with no
+// known answer behind it at all. Two different numbers presented as one proof.
+// Now the figures he reads are the figures the playerbase can check.
+const CEIL_LVL = 50;
+function ceilingCP(baseStats, lvl){
+  const cpm = CPM_TABLE[LVL_IDX[lvl || CEIL_LVL]];
+  if(!cpm || !baseStats) return null;
+  return cpAtStats((baseStats.atk||0)+15, (baseStats.def||0)+15, (baseStats.hp||0)+15, cpm);
+}
+
+// The level a perfect one of these sits at when it reaches a league's cap.
+// ⭐ THE FACT THE FIRST VERSION HAD AND DID NOT USE. A ceiling under the cap says
+// "too small for this league"; this says "too big for it" — Mewtwo reaches 1500
+// at about level 13. Both are hard facts, and answering only the first meant the
+// switcher could confidently tell him to take a Mewtwo to Great League.
+function levelAtCap(baseStats, cap){
+  if(!baseStats || !cap) return null;
+  const s = bestStatSpreadUnderCap(baseStats, cap, {a:15,d:15,h:15});
+  return s ? s.lvl : null;
+}
+
+// How low is "too low"? Never a number I picked — the median level at which the
+// mons THIS APP RANKS for that league sit when they hit the cap. Same technique
+// as the Master median, which survived being attacked for a false positive.
+const _capLvlMedian = {};
+function capLevelMedian(league, cap){
+  if(_capLvlMedian[league] !== undefined) return _capLvlMedian[league];
+  let out = null;
+  const key = cap === 1500 ? '1500' : cap === 2500 ? '2500' : null;
+  if(key && typeof META_SCORES !== 'undefined' && META_SCORES[key]){
+    const lv = Object.keys(META_SCORES[key])
+      .map(id => (POKEMON.find(p => p.speciesId === id) || {}).baseStats)
+      .filter(Boolean).map(bs => levelAtCap(bs, cap)).filter(v => v !== null).sort((a,b)=>a-b);
+    if(lv.length >= 20) out = lv[Math.floor(lv.length/2)];
+  }
+  _capLvlMedian[league] = out;
+  return out;
+}
+
+// The highest CAPPED league a species can actually be built to the cap of.
+// Master is deliberately not "home" for anything — it has no cap to reach, so
+// reaching it proves nothing. Saying otherwise would be inventing a threshold.
+function homeLeague(baseStats){
+  const c = ceilingCP(baseStats);
+  if(c === null) return null;
+  if(c >= 2500) return 'Ultra League';
+  if(c >= 1500) return 'Great League';
+  return null;                                  // cannot fill even Great's cap
+}
+
+// Does this squad fit the league it is being scored in? Returns only FACTS —
+// the ceiling, the cap, the gap — and never a verdict the numbers do not carry.
+// ⚠ THIS FUNCTION GAVE CONFIDENTLY WRONG, EXPENSIVE ADVICE AND OBITO CAUGHT IT
+// BEFORE IT REACHED HIS PHONE. Old rule: suggest the highest capped league every
+// member can FILL. But `home` only means "ceiling >= 1500", which is true of
+// nearly every viable Pokémon in the game — so the branch degenerated and **the
+// suggestion was set entirely by the weakest member, dragging the strongest down
+// with it.** Measured: [Morpeko, Mewtwo] in Ultra rendered *"this squad fills out
+// in Great League"* — telling him to take a Mewtwo to a 1500 cap, where it sits
+// at about level 13. Reachable today; Analyze unlocks at two Pokémon and every
+// squad passes through that state while it is being built.
+//
+// A ceiling under a cap is evidence. Being OVER a cap is not evidence you belong
+// there. So a league is only suggested when every member both FILLS it and is
+// not CRUSHED by it, and crushed is measured against that league's own ranked
+// pool rather than a number anybody chose.
+function homes0(rows){
+  if(!rows.length) return null;          // ⚠ [].every() is true — an empty squad
+                                         // used to get a confident suggestion.
+                                         // A fail-open that answers instead of
+                                         // declining is the shape this house
+                                         // keeps paying for.
+  for(const [lg, cap] of [['Ultra League',2500], ['Great League',1500]]){
+    const med = capLevelMedian(lg, cap);
+    const ok = rows.every(r => {
+      if(r.ceiling === null || r.ceiling < cap) return false;     // cannot fill it
+      if(med === null) return true;                               // no pool, no claim
+      const lv = r.baseStats ? levelAtCap(r.baseStats, cap) : null;
+      return lv === null || lv >= med * 0.55;                     // not crushed by it
+    });
+    if(ok) return lg;
+  }
+  return null;
+}
+
+function leagueFit(members, league){
+  const cap = league === 'Great League' ? 1500 : league === 'Ultra League' ? 2500 : null;
+  const med = cap ? capLevelMedian(league, cap) : null;
+  const rows = members.map(m => {
+    const bs = (m.mon && m.mon.baseStats) || m.baseStats || null;
+    const ceiling = bs ? ceilingCP(bs) : null;
+    const atCap = (bs && cap) ? levelAtCap(bs, cap) : null;
+    return { name: (m.mon && m.mon.speciesName) || m.speciesName,
+             ceiling, baseStats: bs, home: bs ? homeLeague(bs) : null, atCap,
+             short: (cap && ceiling !== null && ceiling < cap) ? cap - ceiling : 0,
+             /* ⭐ THE OTHER DIRECTION, which the first version could not see at
+                all: a squad far too BIG for the league it is parked in. He asked
+                "am I in the wrong league?", not "am I undersized?" — and a
+                Master-tier team sitting in Great was silent. */
+             crushed: (atCap !== null && med !== null && atCap < med * 0.55) ? { atCap, med } : null };
+  });
+  /* ⚠ MASTER LEAGUE HAS NO CAP TO MISS, AND SILENCE THERE IS THE SAME DEFECT.
+     A 2,200-CP squad in Master is the worst case in the game and the check above
+     cannot see it, because there is no cap to fall short of.
+     So the comparison is against MASTER'S OWN META, taken from the ranking table
+     this app already ships — never against a number I picked. If the squad's
+     best ceiling is under the median ceiling of the mons Master is actually
+     played with, that is a fact with a source, and it is reported as one. */
+  if(cap === null && typeof META_SCORES !== 'undefined' && META_SCORES['10000']){
+    const pool = Object.keys(META_SCORES['10000'])
+      .map(id => (POKEMON.find(p => p.speciesId === id) || {}).baseStats)
+      .filter(Boolean).map(bs => ceilingCP(bs)).filter(Boolean).sort((a,b)=>a-b);
+    if(pool.length >= 20){
+      const median = pool[Math.floor(pool.length/2)];
+      const mine = rows.map(r => r.ceiling).filter(c => c !== null);
+      const best = mine.length ? Math.max(...mine) : null;
+      if(best !== null && best < median){
+        rows.forEach(r => { if(r.ceiling !== null && r.ceiling < median) r.underMeta = median - r.ceiling; });
+        return { cap, rows, shortOnes: [], suggested: homes0(rows), uncapped: true,
+                 masterGap: { median, best, poolSize: pool.length,
+                              under: rows.filter(r => r.underMeta) } };
+      }
+    }
+  }
+
+  const shortOnes = rows.filter(r => r.short > 0);
+  const crushedOnes = rows.filter(r => r.crushed);
+  return { cap, rows, shortOnes, crushedOnes, suggested: homes0(rows), uncapped: cap === null };
+}
+
 // Max-out cost is a VERIFIED constant: 296 XL candy to go L40->L50 for any
 // standard Pokémon (Niantic upgrade table: xlCandyCost summed x upgradesPerLevel
 // = 148 x 2 = 296). Confirmed against in-game screens for Azumarill/Sableye/
@@ -3689,7 +3851,17 @@ function scoreSquadReal(){
     verdict: leagueNote,
     strengths: strengths.length ? strengths : ['Nothing is carrying this build.'],
     risks: risks.length ? risks : ['No structural weaknesses found.'],
-    order
+    order,
+    fit: leagueFit(members, league),
+    league,
+    // ⚠ WHAT ACTUALLY DROVE THE NUMBER, CARRIED OUT WITH IT. The founder ran his
+    // squad, switched league, ran again and got the SAME percentage — and told
+    // me, because it read like the analysis had not re-run. It had: the threat
+    // underneath went Togedemaru -> Tinkaton -> Melmetal/Raikou/Hippowdon. Both
+    // capped leagues simply landed in the same scoring bucket.
+    // A SCORE THAT STAYS THE SAME WHILE ITS REASON CHANGES COMPLETELY READS AS
+    // A SCORE THAT DID NOT RUN. So the reason ships beside the score.
+    topThreat: shared.length ? shared[0][0] : null
   };
 }
 
@@ -3708,6 +3880,54 @@ function renderAnalysis(r){
         </div>
       </div>` : '';
 
+  /* ---- SMART LEAGUE SWITCHER ------------------------------------------------
+     Only speaks when it has a fact. A species whose ceiling is under the cap can
+     never be built to the cap — that is not an opinion about the pick, it is the
+     size of the box it is allowed to grow into. Silent when everything fits. */
+  const f = r.fit || {};
+  let fitHtml = '';
+  if(f.masterGap){
+    const g = f.masterGap;
+    fitHtml = `
+      <div class="fit-note fit-all">
+        <div class="fit-head">🚩 Undersized for Master League</div>
+        <ul class="fit-list">
+          <li>Master has <b>no CP cap</b>, so nothing here is "short of the cap" — but your biggest ceiling is <b>${g.best}</b> CP against a meta whose median ceiling is <b>${g.median}</b>, measured across the <b>${g.poolSize}</b> ranked Master picks this app ships.</li>
+          ${g.under.map(u=>`<li><b>${u.name}</b> tops out at <b>${u.ceiling}</b> — <b>${u.underMeta}</b> below that median.</li>`).join('')}
+        </ul>
+        ${f.suggested ? `<div class="fit-move">You may be in the wrong league — this squad fills out in <b>${f.suggested}</b>.</div>` : ''}
+      </div>`;
+  } else if(f.crushedOnes && f.crushedOnes.length){
+    /* TOO BIG for this league — the other half of "am I in the wrong league?" */
+    const all = f.crushedOnes.length === (f.rows||[]).length;
+    fitHtml = `
+      <div class="fit-note ${all ? 'fit-all' : ''}">
+        <div class="fit-head">${all ? '🚩' : '⚠'} ${all ? 'This squad is too big for this league' : `${f.crushedOnes.length} of these are too big for this league`}</div>
+        <ul class="fit-list">
+          ${f.crushedOnes.map(c=>`<li><b>${c.name}</b> hits the ${f.cap} cap at <b>level ${c.crushed.atCap}</b> — the mons this app ranks for ${r.league} sit around <b>level ${c.crushed.med}</b> there. It is being squeezed into a fraction of itself.</li>`).join('')}
+        </ul>
+        ${f.suggested && f.suggested !== r.league ? `<div class="fit-move">You may be in the wrong league — this squad fills out in <b>${f.suggested}</b>.</div>` : ''}
+      </div>`;
+  } else if(f.shortOnes && f.shortOnes.length){
+    const all = f.shortOnes.length === (f.rows||[]).length;
+    const list = f.shortOnes.map(s =>
+      `<li><b>${s.name}</b> tops out at <b>${s.ceiling}</b> CP — <b>${s.short}</b> under the ${f.cap} cap, at 15/15/15 and level 50. It can never arrive full size here.</li>`
+    ).join('');
+    const move = f.suggested && f.suggested !== r.league
+      ? `<div class="fit-move">You may be in the wrong league — this squad fills out in <b>${f.suggested}</b>.</div>` : '';
+    fitHtml = `
+      <div class="fit-note ${all ? 'fit-all' : ''}">
+        <div class="fit-head">${all ? '🚩' : '⚠'} ${f.shortOnes.length === 1 ? 'One of these' : `${f.shortOnes.length} of these`} can't reach the cap</div>
+        <ul class="fit-list">${list}</ul>
+        ${move}
+      </div>`;
+  }
+  /* And what actually drove the number, so switching leagues never again looks
+     like nothing happened. */
+  const threatHtml = r.topThreat
+    ? `<div class="fit-driver">Scored against <b>${r.league}</b>'s meta — the threat setting this score is <b>${r.topThreat}</b>.</div>`
+    : '';
+
   ANALYSIS.innerHTML = `
     <div class="analysis-card">
       <div class="analysis-head">
@@ -3715,6 +3935,7 @@ function renderAnalysis(r){
         <div class="score-badge">${r.synergy_score}<span>/100</span></div>
       </div>
       <div class="analysis-verdict">"${r.tagline}" ${r.verdict}</div>
+      ${fitHtml}${threatHtml}
       <div class="analysis-cols">
         <div>
           <div class="ac-label good">Strengths</div>
