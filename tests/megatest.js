@@ -609,6 +609,44 @@ const t = (name, ok, detail) => {
   t('CONTROL: no such warning while the schedule is current', stale.freshCount === 1,
     stale.freshCount + ' note');
 
+  console.log('\n--- the secret clicker draws from the LIVE meta ---');
+  /* Marth spotted this one himself: "we may need to update the randomized
+     pokemon in the secret clicker". The jackpot pools were hand-typed species
+     ids frozen in the source, and against PvPoke's own current rankings — which
+     have been in gamemaster.json the whole time, feeding board viability — the
+     Great League pool shared exactly ONE name with the real top twelve.
+
+     ⚠ THIS TEST NAMES NO POKEMON. Asserting "mimikyu is in the pool" would go
+     red the week the meta moves, for no defect — a guard that punishes the
+     house for the world changing is a guard people rip out. It asserts the
+     RELATIONSHIP instead: the pool is what the rankings say, and it is no
+     longer what the frozen list said. */
+  const pool = await p.evaluate(() => {
+    const CAP = { 'Great League': '1500', 'Ultra League': '2500', 'Master League': '10000' };
+    const derive = (lg, n) => {
+      const s = META_SCORES[CAP[lg]] || {};
+      return Object.keys(s).filter(i => !/_shadow$|_mega|_primal/.test(i))
+        .filter(i => POKEMON.some(p => p.speciesId === i))
+        .sort((a, b) => s[b] - s[a]).slice(0, n);
+    };
+    const frozenGL = ['azumarill','registeel','medicham','stunfisk_galarian','lickitung',
+                      'bastiodon','clodsire','annihilape','carbink','gligar'];
+    const live = derive('Great League', 10);
+    return { live, overlap: live.filter(i => frozenGL.indexOf(i) !== -1).length,
+             allReal: live.every(i => POKEMON.some(p => p.speciesId === i)),
+             noVariants: live.every(i => !/_shadow$|_mega|_primal/.test(i)),
+             ultra: derive('Ultra League', 10).length,
+             master: derive('Master League', 10).length };
+  });
+  t('the pool is drawn from the live rankings, not the frozen list',
+    pool.overlap <= 2, pool.overlap + ' of 10 shared with the old hardcoded list');
+  t('every drawn pick is a real Pokemon in the roster', pool.allReal, pool.live.length + ' picks');
+  /* shadows rank beside their own base forms, so an underived pool would be
+     half the same face twice; megas are not standard-GBL legal. */
+  t('no shadow, mega or primal duplicates in the pool', pool.noVariants, 'clean');
+  t('all three leagues fill', pool.live.length === 10 && pool.ultra === 10 && pool.master === 10,
+    pool.live.length + '/' + pool.ultra + '/' + pool.master);
+
   t('zero JS errors through the whole pass', errs.length === 0, errs.join(' | ') || 'clean');
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

@@ -3127,18 +3127,62 @@ document.addEventListener('click', function(e){
   const fw = document.querySelector('.site-footer .brand-wordmark');
   if(!fw) return;
 
-  // Curated from long-standing GBL meta staples (PvPoke-ranking lineage).
-  // Invalid ids silently drop out at runtime, so the pools self-heal.
-  const POOLS = {
+  /* ⭐ THE POOLS DERIVE THEMSELVES NOW — Marth, Sept 4 2026:
+       "we may need to update the randomized pokemon in the secret clicker"
+
+     He was right, and it was worse than "may". These were hand-typed lists of
+     species ids frozen in the source, and measured against PvPoke's own current
+     rankings — which have been sitting in gamemaster.json all along, feeding
+     the viability math on every board — the Great League pool shared exactly
+     ONE name with today's real top twelve. Mimikyu, Tinkaton, Lickilicky,
+     Empoleon, Quagsire, Jellicent, Forretress: none of them were in it. The
+     jackpot was handing him squads from a meta that no longer exists.
+
+     ⚠ RE-TYPING BETTER NAMES WOULD HAVE BEEN THE WRONG FIX — it buys one
+     correct day and goes stale again in silence, which is exactly how it got
+     here. The rankings refresh with every `npm run refresh-meta`, so the pools
+     now read the property instead of repeating a remembered mention.
+
+     ⚠ SHADOWS ARE EXCLUDED ON PURPOSE, not by oversight: they rank beside their
+     own base forms (altaria and altaria_shadow are both top-12 in Great), and a
+     pool half-full of the same face twice makes a worse random squad. Megas and
+     primals too — the jackpot builds standard GBL teams.
+     ⚠ AND THE HAND-CURATED LISTS STAY AS A FALLBACK. If metaScores is ever
+     missing the jackpot still works off the old staples rather than generating
+     an empty squad — ABSENT is handled, not assumed away. */
+  const CAP_OF = { 'Great League': '1500', 'Ultra League': '2500', 'Master League': '10000' };
+  function metaPool(league, n){
+    const scores = META_SCORES && META_SCORES[CAP_OF[league]];
+    if(!scores) return null;                       // ABSENT — caller falls back
+    const ids = Object.keys(scores)
+      .filter(id => !/_shadow$|_mega|_primal/.test(id))
+      .filter(id => POKEMON.some(p => p.speciesId === id))   // must really exist
+      .sort((a, b) => scores[b] - scores[a])
+      .slice(0, n);
+    return ids.length >= Math.min(8, n) ? ids : null;        // too thin to trust
+  }
+
+  // Fallback only — the long-standing GBL staples, kept for when rankings are
+  // unreadable. Invalid ids silently drop out at runtime, so the pools self-heal.
+  const CURATED_POOLS = {
     'Great League': ['azumarill','registeel','medicham','stunfisk_galarian','swampert','altaria','sableye','trevenant','lickitung','bastiodon','lanturn','carbink','clodsire','annihilape','skarmory','umbreon','mandibuzz','gligar','morpeko_full_belly','jumpluff'],
     'Ultra League': ['giratina_altered','cresselia','talonflame','registeel','swampert','tapu_fini','virizion','cobalion','steelix','dragonite','gyarados','jellicent','poliwrath','drifblim','guzzlord','greedent','scizor','ampharos'],
     'Master League': ['dialga','zacian','mewtwo','kyogre','groudon','lugia','rhyperior','metagross','dragonite','landorus_therian','ho_oh','melmetal','garchomp','togekiss','excadrill','palkia','yveltal','zekrom','reshiram','gyarados']
   };
-  const TOP = {
+  const CURATED_TOP = {
     'Great League': ['azumarill','registeel','medicham','stunfisk_galarian','lickitung','bastiodon','clodsire','annihilape','carbink','gligar'],
     'Ultra League': ['giratina_altered','cresselia','talonflame','registeel','tapu_fini','virizion','cobalion','steelix','swampert'],
     'Master League': ['dialga','zacian','mewtwo','kyogre','groudon','lugia','landorus_therian','ho_oh','melmetal','metagross']
   };
+  /* Live rankings first, the frozen staples only if they cannot be read.
+     Computed on each draw rather than at load, so a mid-session meta refresh
+     is picked up and the fallback is re-tested rather than latched. */
+  const POOLS = { get 'Great League'(){ return metaPool('Great League', 20) || CURATED_POOLS['Great League']; },
+                  get 'Ultra League'(){ return metaPool('Ultra League', 20) || CURATED_POOLS['Ultra League']; },
+                  get 'Master League'(){ return metaPool('Master League', 20) || CURATED_POOLS['Master League']; } };
+  const TOP   = { get 'Great League'(){ return metaPool('Great League', 10) || CURATED_TOP['Great League']; },
+                  get 'Ultra League'(){ return metaPool('Ultra League', 10) || CURATED_TOP['Ultra League']; },
+                  get 'Master League'(){ return metaPool('Master League', 10) || CURATED_TOP['Master League']; } };
   const BUDGET_NORMAL = ['lickitung','greedent','snorlax','ursaluna','dubwool','bibarel'];
 
   const byId = id => POKEMON.find(p => p.speciesId === id);
