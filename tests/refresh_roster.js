@@ -39,8 +39,17 @@
 //   somebody built.
 //
 // Usage:
+// * IT REFUSES TO WRITE when upstream offers a field neither mapper keeps and
+//   nobody has written down why. That is the Aug 19 bug's exact shape, and a
+//   version of this check that only WARNED was still failing open — it printed
+//   a perfect warning and wrote the file anyway. Obito caught that by breaking
+//   a mapper and watching --apply succeed. Override: --allow-unreasoned.
+//
+// Usage:
 //   node tests/refresh_roster.js                 # dry run, prints the diff
 //   node tests/refresh_roster.js --apply         # write it
+//   node tests/refresh_roster.js --apply --allow-unreasoned   # write despite a
+//                                                 # dropped field with no reason
 //   npm test                                     # then run the suite
 'use strict';
 
@@ -50,6 +59,8 @@ const { execSync } = require('child_process');
 
 const APPLY = process.argv.includes('--apply');
 const ALLOW_REMOVALS = process.argv.includes('--allow-removals');
+/* deliberate override for the field-coverage refusal below — see the ⛔ block */
+const ALLOW_UNREASONED = process.argv.includes('--allow-unreasoned');
 const TARGET = process.argv.find(a => a.endsWith('.json')) ||
   path.join(__dirname, '..', 'gamemaster.json');
 const SRC = 'https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/gamemaster.json';
@@ -79,6 +90,39 @@ const mapMon = p => {
     fastMoves: p.fastMoves || [],
     chargedMoves: p.chargedMoves || [],
   };
+  /* ⭐ THE MEGA EVOLUTION BONUS MOVE — added Sept 3 2026, and the reason this
+     whole field exists in the first place. Marth, from the field:
+
+       > "1 I don't think he account for mega evolutions & 2 when I type a mon,
+       >  if eligible; there's no slot for a mega pokemons 4th move."
+
+     He was right twice. His Mega Mewtwo Y shows FOUR moves in-game — Psycho Cut,
+     Psystrike, Thunderbolt, and **Future Sight+** under a pink MEGA EVOLUTION
+     BONUS tag — and this app knew about none of it.
+
+     ⚠ THE PART THAT MATTERS, AND THE REASON IT MUST BE FIXED *HERE*: the 13
+     `_PLUS` move DEFINITIONS were already in our gamemaster — the Aug 19 sync
+     pulled them in and its own header even names them ("14 moves missing, all
+     the _PLUS reworks"). What was missing was never the moves. It was the LINK
+     saying which mega gets which one. Upstream holds that in `extraChargedMoves`
+     and this whitelist silently dropped the field, so the ammunition sat in the
+     building with nothing wired to fire it.
+
+     ⚠⚠ AND IT CANNOT BE PATCHED BY HAND. Line ~204 does
+     `gm.pokemon = src.pokemon.map(mapMon).concat(keptMon)` — it REPLACES the
+     array wholesale rather than merging. A hand-added `extraChargedMoves` on
+     mewtwo_mega_y would be silently destroyed by the very next --apply, and the
+     bug would come back wearing a fixed-once badge. Izumi proved that by reading
+     line 204 rather than trusting the shape.
+
+     ⚠ NOT MEGA-ONLY, despite the name everyone will reach for. Cramorant and its
+     two forms carry Gulp Missile in this same field. Anything keyed off
+     /_mega/ here would work today and break on the first non-mega that uses it.
+
+     Only stamped when non-empty, for the same reason as `released` below. */
+  if (Array.isArray(p.extraChargedMoves) && p.extraChargedMoves.length) {
+    out.extraChargedMoves = p.extraChargedMoves;
+  }
   /* carried so a silhouette can be SHOWN as a silhouette. Only stamped when
      false, so the file does not grow by 1,600 redundant `released:true`. */
   if (p.released === false) out.released = false;
@@ -95,6 +139,19 @@ const mapMove = m => {
   if (m.energyGain) out.energyGain = m.energyGain;
   if (m.cooldown && !m.energy) out.cooldown = m.cooldown;
   if (m.archetype) out.archetype = m.archetype;
+  /* ⭐ THE AUTHORITATIVE MEGA-MOVE FLAG. Found by the field-coverage check
+     below on its very first run — `isMegaMove`, carried by exactly 13 of 349.
+
+     ⚠ TAKE THIS AND NEVER MATCH ON THE NAME. The obvious shortcut is
+     /_PLUS$/.test(moveId), and today it gives the identical answer: all 13
+     flagged moves end in _PLUS, and no _PLUS move is unflagged (checked both
+     directions against upstream, Sept 3 2026). It is still the wrong instrument,
+     and it is this house's most-repeated defect in one line — MATCHING A MENTION
+     INSTEAD OF READING A PROPERTY. A future mega move named without the suffix,
+     or a plain rework that happens to take one, and a name-matcher is silently
+     wrong while looking right. The flag is the fact; the suffix is a coincidence
+     that currently agrees with it. */
+  if (m.isMegaMove) out.isMegaMove = true;
   const b = mapBuff(m);
   if (b) out.buff = b;
   return out;
@@ -188,10 +245,132 @@ console.log(`\n  * = PvPoke marks it released:false. NOTE their flag means "not 
 console.log(`    NOT "not in the game" — Ditto and Shedinja carry it too. Carried through as`);
 console.log(`    \`released:false\` so the UI can show a silhouette rather than hide the mon.`);
 
+/* ══ FIELD COVERAGE — the guard that should have existed on Aug 19 ══════════
+   ⚠ THIS IS THE WOUND THIS SCRIPT SHIPPED WITH, and it is worth stating in full
+   because the shape repeats. On Aug 19 this script ran, reported "145 new
+   pokemon, 14 new moves, nothing removed", and was believed. It was telling the
+   truth and it was still useless, because the thing that was actually broken was
+   a FIELD it does not copy — `extraChargedMoves`, the link from a mega to its
+   bonus move. Every _PLUS move arrived. Not one was reachable. The report was
+   green for two weeks over a feature that did not work, and Marth found it by
+   playing the game rather than by reading a number.
+
+   A diff that only compares WHICH ENTRIES EXIST is blind to WHAT IS IN THEM.
+   Both sets matched perfectly while a whole feature was missing.
+
+   So: compare what upstream OFFERS against what `mapMon`/`mapMove` actually
+   KEEP — and derive the kept set by running the mappers, never by typing a list
+   beside them, or the check drifts the first time somebody edits a mapper and
+   forgets the twin. Known-deliberate drops are named with their reason and stay
+   quiet; anything else is loud, with a count of how many entries carry it, so a
+   new field cannot arrive unannounced again.
+
+   ⚠ WHAT THIS STILL CANNOT SEE: a field we DO copy whose MEANING changes
+   upstream, and a field that is present but empty on every entry today and
+   filled in next month. It watches the shape, not the semantics. */
+const KNOWN_DROPPED_MON = {
+  tags: 'PvPoke bookkeeping (shadoweligible, legendary) — not used by any board',
+  defaultIVs: 'per-league rank-1 IV spreads; this app computes its own',
+  searchPriority: "PvPoke's search ordering, not ours",
+  level25CP: 'raid-boss CP; this app is PvP-only and has no raid path at all',
+  eliteMoves: 'refresh_meta.js owns these, as gm.moveFlags[id].e',
+  legacyMoves: 'refresh_meta.js owns these, as gm.moveFlags[id].l',
+  buddyDistance: 'overworld, not battle',
+  thirdMoveCost: 'the stardust/candy price of unlocking a 2nd charged move',
+  levelFloor: 'raid/hatch level floor; PvP-only app',
+  family: 'evolution family id — no board or score reads it',
+  aliasId: "PvPoke's internal redirect for a renamed form",
+  originalFormId: 'form-change bookkeeping (which form this reverts to)',
+  formChange: 'form-change bookkeeping (which forms this can become)',
+  nicknames: 'UNEXAMINED — community shorthand ("Azu"), 103 mons. Would likely '
+    + "improve Sprocket's mon lookup, since Marth types casually. Not his ask today.",
+  nativeStatBuffs: 'UNEXAMINED — only 2 mons carry it, but it reads like a '
+    + 'permanent stat modifier, which would touch damage math. Look before dismissing.',
+};
+const KNOWN_DROPPED_MOVE = {
+  moveId: 'becomes the KEY of the moves object rather than a field on it',
+  abbreviation: 'display shorthand this app does not use',
+  buffs: 'reshaped by mapBuff into {chance, effects}',
+  buffTarget: 'reshaped by mapBuff', buffApplyChance: 'reshaped by mapBuff',
+  buffsSelf: 'reshaped by mapBuff', buffsOpponent: 'reshaped by mapBuff',
+  archetype: 'carried through — listed only if the mapper stops keeping it',
+  turns: 'derived, not dropped: app.js:187 computes Math.round(cooldown/500)',
+  category: "PvPoke bookkeeping on 2 moves", tags: 'PvPoke bookkeeping on 2 moves',
+  damageMethod: 'PvPoke bookkeeping on 2 moves',
+  unlisted: 'UNEXAMINED — 20 moves flagged. If it means "not obtainable", a board '
+    + 'could be recommending a move nobody can actually have. Worth one look.',
+};
+const keysOver = (list, fn) => {
+  const s = new Set();
+  for (const x of list) for (const k of Object.keys(fn ? fn(x) : x)) s.add(k);
+  return s;
+};
+function coverage(label, list, mapper, known) {
+  const offered = keysOver(list, null);
+  const kept = keysOver(list, mapper);
+  const dropped = [...offered].filter(k => !kept.has(k));
+  const surprise = dropped.filter(k => !(k in known));
+  console.log(`\n  FIELD COVERAGE (${label}): upstream offers ${offered.size}, we keep ${kept.size}`);
+
+  /* ⚠ A KNOWN-DROPS LIST IS A SNOOZE BUTTON unless deferring stays visible.
+     The whole point of this guard is that a field went missing quietly; if
+     "I'll look at that later" also goes quiet, the guard has grown its own
+     version of the bug it was built to catch. So a reason beginning UNEXAMINED
+     keeps printing — dimmer than a surprise, louder than nothing — until
+     somebody actually rules on it and writes a real reason. */
+  const deferred = dropped.filter(k => /^UNEXAMINED\b/.test(known[k] || ''));
+  if (deferred.length) {
+    console.log(`    · ${deferred.length} dropped field(s) DEFERRED, not decided:`);
+    for (const k of deferred) console.log(`       ${k} — ${known[k].replace(/^UNEXAMINED — /, '')}`);
+  }
+  if (!surprise.length) {
+    console.log(`    ✓ every other dropped field is a known, reasoned drop `
+      + `(${dropped.length - deferred.length})`);
+    return 0;
+  }
+  console.log(`    ⚠ ${surprise.length} UPSTREAM FIELD(S) DROPPED WITH NO REASON ON RECORD:`);
+  for (const k of surprise) {
+    const carriers = list.filter(x => {
+      const v = x[k];
+      return Array.isArray(v) ? v.length : (v !== undefined && v !== null && v !== '');
+    }).length;
+    console.log(`       ${k}  — carried by ${carriers} of ${list.length}`);
+  }
+  console.log(`    Decide each one: copy it in ${label === 'pokemon' ? '`mapMon`' : '`mapMove`'},`);
+  console.log(`    or name it in KNOWN_DROPPED with the reason. Do not leave it silent —`);
+  console.log(`    that silence is exactly how the mega bonus move went missing.`);
+  return surprise.length;
+}
+const surprises = coverage('pokemon', src.pokemon, mapMon, KNOWN_DROPPED_MON)
+                + coverage('moves', src.moves, mapMove, KNOWN_DROPPED_MOVE);
+
 if ((goneMon.length || goneMv.length) && !ALLOW_REMOVALS) {
   console.log(`\n  ⚠ REMOVALS DETECTED and not applied. A mon disappearing from PvPoke must`);
   console.log(`    never silently delete itself out of a squad somebody built. Re-run with`);
   console.log(`    --allow-removals if that is genuinely what you want.`);
+}
+
+/* ⚠⚠ THE GUARD MUST REFUSE, NOT MERELY REMARK — Obito's catch, Sept 3 2026,
+   and he found it by doing the thing I did not: he broke `mapMon` so it silently
+   dropped `types`, ran --apply, and watched it **print the warning loudly and
+   write the file anyway, exit 0.**
+
+   That is a guard that fails OPEN. It would have printed a perfect warning on
+   Aug 19 and the mega bonus move would still have gone missing, because the run
+   succeeded and nobody reads a green run's console. Detecting a defect and
+   proceeding is not prevention; it is a louder version of the same silence.
+
+   So: an unreasoned dropped field STOPS the write. The escape hatch mirrors
+   `--allow-removals` exactly — deliberate, named, and impossible to hit by
+   accident — because refusing forever would be the other failure, a guard that
+   punishes the house for normal work until somebody rips it out. */
+if (surprises > 0 && !ALLOW_UNREASONED) {
+  console.log(`\n  ⛔ REFUSING${APPLY ? ' TO WRITE' : ''}: ${surprises} upstream field(s) are dropped with no`);
+  console.log(`     reason on record (listed above). That is the exact shape of the bug this`);
+  console.log(`     check exists to catch — the mega bonus move was one of these for two weeks.`);
+  console.log(`     Copy the field in its mapper, or name it in KNOWN_DROPPED with a reason.`);
+  console.log(`     If you have genuinely decided and want to proceed anyway: --allow-unreasoned\n`);
+  process.exit(1);
 }
 
 if (!APPLY) {

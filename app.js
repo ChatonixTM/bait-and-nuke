@@ -45,6 +45,67 @@ let searchIndex = [];  // {name, lower, ref}
 let squad = [];         // up to 3 { speciesId, speciesName, types, fast, charged, cycleDps, casts, totalDamage, totalTimeS }
 let currentMonBest = null;
 
+/* ═══ THE MEGA EVOLUTION BONUS MOVE ═══════════════════════════════════════
+   Marth, Sept 3 2026, from the field with three screenshots:
+
+     > "1 I don't think he account for mega evolutions & 2 when I type a mon,
+     >  if eligible; there's no slot for a mega pokemons 4th move."
+
+   His Mega Mewtwo Y shows FOUR moves in game — Psycho Cut, Psystrike,
+   Thunderbolt, and **Future Sight+** under a pink MEGA EVOLUTION BONUS tag.
+   The app had no concept of it: `chargedMoves` was the only move source in the
+   entire file, and no species referenced a `_PLUS` move.
+
+   ── WHAT THIS MOVE IS, AND THE DESIGN THAT FOLLOWS FROM IT ─────────────────
+   ⭐ IT IS GRANTED, NOT CHOSEN. He cannot TM Future Sight+ off his Mewtwo and
+   he did not pick it — mega evolving hands it to him. That single fact decides
+   the UI: the bonus move is a READ-ONLY slot, never a fourth `<select>`. A
+   dropdown would invite a choice the game does not offer, which is a lie told
+   in the shape of a control. It sits BESIDE the two he really picks, labelled
+   as what it is.
+   ⭐ IT IS IN ADDITION, NOT INSTEAD. His screenshot shows all four at once.
+
+   ⚠ NOT MEGA-ONLY, whatever the name says. Cramorant and its two forms carry
+   Gulp Missile in this very field. Key off the DATA, never off /_mega/.
+   ⚠ AND THE POWER NUMBER HERE IS THE PvP ONE. The game shows Future Sight+ as
+   130 in Trainer Battles and 140 in Gyms & Raids, plus a "+N" bonus component
+   in both. This app has never had a raid path — Izumi checked: the strings
+   "raid" and "gym" appear nowhere in this file — and our move table holds one
+   power per move. So 130 is right for what this app is, the raid figure is
+   correctly ABSENT rather than wrong, and what the "+N" represents is not
+   something our data can say. It is not modelled and must not be invented. */
+function bonusMovesOf(mon){
+  return ((mon && mon.extraChargedMoves) || []).map(id => MOVES[id]).filter(Boolean);
+}
+
+/* ═══ OFF THE BOARDS ══════════════════════════════════════════════════════
+   Megas and primals cannot be brought to GO Battle League, so this app has
+   always excluded them as CANDIDATES on any nightmare or sleeper board. That
+   exclusion is correct and stays.
+
+   ⚠ WHAT WAS NOT CORRECT was what the app did with the silence. The rule lived
+   as a bare regex in two places, and everything downstream read "not on the
+   board" as "not a threat". So Sprocket, asked *"mewtwo mega y vs gyarados"*,
+   answered **"Neither hard-counters the other... even fight, play it clean."**
+   That is not an incomplete answer, it is a confident WRONG one: the mega was
+   never allowed onto the board to be counted, so the engine had no opinion at
+   all and Sprocket reported its absence as a finding. Marth's line was
+   *"I don't think he account for mega evolutions"* — this is the sharpest form
+   of it, and it is this house's own law being broken inside its own app:
+   **VALUE / ABSENT / REFUSED are three states, and an empty answer is not a
+   negative answer.**
+
+   So the rule gets ONE name, asked rather than re-typed, and callers that speak
+   to a human must check it and say *I cannot rule on this* instead of guessing.
+   ⚠ IT DOES NOT SUPPRESS THE MON ANYWHERE ELSE — you can still search a mega,
+   read its moves, see its own board. It only means it is not offered as a pick
+   against somebody else. */
+function offTheBoards(idOrMon){
+  const id = typeof idOrMon === 'string' ? idOrMon : (idOrMon && idOrMon.speciesId) || '';
+  const name = (typeof idOrMon === 'object' && idOrMon && idOrMon.speciesName) || '';
+  return /_mega|_primal/.test(id) || /\(Mega|\(Primal/.test(name);
+}
+
 const THEMES = {
   dark: {
     label:'Dark', typeLabel:'Dark type',
@@ -913,6 +974,9 @@ function buildLoadoutEntry(mon, fast, bait, nuke, ivs){
     speciesId: mon.speciesId, speciesName: mon.speciesName, types: mon.types,
     baseStats: mon.baseStats, ivs: ivs || null,
     fast, charged: nuke, bait,
+    /* granted by the form, not chosen — so it is not a parameter of this
+       function the way fast/bait/nuke are. It is read off the mon. */
+    bonus: bonusMovesOf(mon),
     cycleDps: nukeStats.cycleDps, casts: nukeStats.casts,
     totalDamage: nukeStats.totalDamage, totalTimeS: nukeStats.totalTimeS,
     castsBait: baitStats ? baitStats.casts : null,
@@ -1039,8 +1103,13 @@ function findNightmares(mon, limit){
     if(fl.length && cl.length){
       try{
         const d = pickDefaultLoadout(m, fl, cl);
-        res = { fast:d.fast, bait:d.bait, nuke:d.nuke, charged:cl,
-                moves:[d.fast,d.bait,d.nuke].filter(Boolean) };
+        /* the bonus move joins `moves` — the list bestHit() scans for type
+           coverage — but NOT `charged`, which is the pickable list. A mega's
+           extra move is real damage it can actually throw, so leaving it out
+           understated every mega's coverage on every board. */
+        const bl = bonusMovesOf(m);
+        res = { fast:d.fast, bait:d.bait, nuke:d.nuke, charged:cl, bonus:bl,
+                moves:[d.fast,d.bait,d.nuke].concat(bl).filter(Boolean) };
       }catch(e){ res = null; }
     }
     NM_LOADOUTS.set(m.speciesId, res);
@@ -1067,8 +1136,7 @@ function findNightmares(mon, limit){
   POKEMON.forEach(c=>{
     if(c.speciesId === mon.speciesId) return;
     if(/_shadow$/.test(c.speciesId)) return;
-    if(/_mega/.test(c.speciesId) || /\(Mega/.test(c.speciesName)) return;
-    if(/_primal/.test(c.speciesId) || /\(Primal/.test(c.speciesName)) return;
+    if(offTheBoards(c)) return;   // one definition, asked — see offTheBoards()
     const cTypes = (c.types||[]).filter(t=>t && t!=='none').map(t=>t.toLowerCase());
     if(!cTypes.length) return;
     const bs = c.baseStats || {};
@@ -1558,7 +1626,18 @@ function switchToSquadMon(speciesId){
     const nukeSel = document.getElementById('nukeSelect');
     if(fastSel && entry.fast) fastSel.value = entry.fast.moveId;
     if(baitSel) baitSel.value = entry.bait ? entry.bait.moveId : '';
-    if(nukeSel && entry.nuke) nukeSel.value = entry.nuke.moveId;
+    /* ⚠ TWO SHAPES, ONE NAME — and this line was reading the wrong one since it
+       was written. `pickDefaultLoadout` returns {fast, bait, NUKE}; a squad
+       entry from `buildLoadoutEntry` returns {fast, bait, CHARGED}. This is a
+       squad entry, so `entry.nuke` was always undefined and the guard silently
+       skipped the restore. Fast and bait came back; the nuke did not.
+       Measured Sept 3 2026: choose Ice Beam on Azumarill, seat it, navigate
+       away, come back — the dropdown reads HYDRO_PUMP while the squad still
+       holds ICE_BEAM. The board was right and the control lied about it, which
+       is the worse half. The comment below says this block exists to stop a
+       reroll Marth reported; it fixed two of the three dropdowns. */
+    const entryNuke = entry.nuke || entry.charged;
+    if(nukeSel && entryNuke) nukeSel.value = entryNuke.moveId;
     [fastSel, baitSel, nukeSel].forEach(s => s && s.dispatchEvent(new Event('change')));
   }
   // v48: squad arrivals get COMPACT mode — the IV classroom collapses to one
@@ -1679,6 +1758,13 @@ function renderResult(mon){
       <label>Fast move<select id="fastSelect">${fastOpts}</select></label>
       <label>Bait (cheap, 2nd charged move)<select id="baitSelect">${baitOpts}</select></label>
       <label>Nuke (main charged move)<select id="nukeSelect">${nukeOpts}</select></label>
+      ${bonusMovesOf(mon).map(b => `
+      <label><span class="bonus-head">Mega bonus <span class="bonus-tag" title="Granted by Mega Evolution — you don't pick this one and you can't TM it off">granted</span></span>
+        <div class="bonus-slot" data-move="${b.moveId || ''}">
+          <b>${b.name}</b>
+          <span class="bonus-num">${b.power} pwr · ${b.energy} e</span>
+        </div>
+      </label>`).join('')}
     </div>
 
     <div id="ivZone">
@@ -3712,7 +3798,11 @@ function scoreSquadReal(){
     return {
       e, mon,
       types: (e.types||[]).filter(t=>t && t!=='none').map(t=>t.toLowerCase()),
-      moves: [e.fast, e.bait, e.charged].filter(Boolean)
+      /* a mega on the squad brings its bonus move to the fight, so squad
+         scoring counts it. Old saved squads and old share codes have no
+         `bonus` field at all — `||[]` is doing real work here, not defensive
+         padding, because a v1 share code decoded today lands with it missing. */
+      moves: [e.fast, e.bait, e.charged].concat(e.bonus || []).filter(Boolean)
     };
   });
 
@@ -4843,7 +4933,7 @@ function findSleepers(X, opts){
     for(const cand of board){
       const id = cand.c.speciesId;
       if(id === X.speciesId) continue;
-      if(/_mega|_primal/.test(id)) continue;              // banned from GBL
+      if(offTheBoards(id)) continue;                      // banned from GBL
       const w = (4 - cand.tier) * kWeight;
       const e = tally.get(id) || {mon: cand.c, score: 0, eats: []};
       e.score += w;
@@ -5006,13 +5096,58 @@ function findSleepers(X, opts){
   function resolveMon(raw){
     const q = raw.trim().toLowerCase().replace(/\s+/g,' ');
     if(q.length < 3 || !POKEMON.length) return null;
-    let hit = POKEMON.find(p=>p.speciesName.toLowerCase() === q);
+
+    /* ⚠ THE PUNCTUATION WALL — Sept 3 2026, and this is very likely the thing
+       Marth actually hit when he said *"I don't think he account for mega
+       evolutions"*. Asked "moves for mewtwo mega y", Sprocket answered:
+       *"I don't know a mon called 'mewtwo mega y'."*
+
+       Nobody types brackets. The roster spells it **Mewtwo (Mega Y)**, and all
+       three lookups below missed for the same reason: exact and startsWith
+       compared a bracketed name against an unbracketed query, and the fuzzy
+       pass stripped the brackets off the ROSTER side only — leaving base
+       "mewtwo" (6 chars) against "mewtwo mega y" (13), which its own
+       length-difference guard then skipped. Punctuation was normalised on one
+       side of a comparison. That is the whole bug.
+
+       ⚠ AND IT WAS NEVER ABOUT MEGAS. Every parenthesised form was unreachable
+       by its form name the same way — Armored, Shadow, Alolan, Galarian. Fixing
+       this only for /_mega/ would have left the rest broken and looked done.
+
+       `flat` strips the punctuation on BOTH sides. Shortest-name-wins is kept
+       exactly as it was, so "azumarill" still gets base Azumarill, not a
+       variant — that rule was right and this must not weaken it. */
+    const flat = s => String(s||'').toLowerCase()
+      .replace(/[()\[\]\-.,'’]/g,' ').replace(/\s+/g,' ').trim();
+    const fq = flat(q);
+    const byShortest = list => list.length
+      ? list.slice().sort((a,b)=>a.speciesName.length - b.speciesName.length)[0] : null;
+
+    let hit = POKEMON.find(p=>p.speciesName.toLowerCase() === q)
+           || POKEMON.find(p=>flat(p.speciesName) === fq);
     if(hit) return hit;
-    const starts = POKEMON.filter(p=>p.speciesName.toLowerCase().startsWith(q));
-    if(starts.length){
-      // prefer the base form (shortest name) so "azumarill" doesn't grab a variant
-      starts.sort((a,b)=>a.speciesName.length - b.speciesName.length);
-      return starts[0];
+    const starts = POKEMON.filter(p=>p.speciesName.toLowerCase().startsWith(q)
+                                  || flat(p.speciesName).startsWith(fq));
+    if(starts.length) return byShortest(starts);
+
+    /* every word he typed appears in the name, in any order — catches
+       "mega mewtwo y". Two words minimum, or a single common word would drag
+       in half the roster.
+
+       ⚠ SINGLE LETTERS ARE KEPT, and dropping them was this function's second
+       bug — caught by megatest.js on its first run. Filtering tokens shorter
+       than 2 chars threw away the **X** and the **Y**, which is the only thing
+       separating Mega X from Mega Y. "mega mewtwo y" silently resolved to
+       Mewtwo (Mega X): a wrong mon, confidently, with no way for him to tell.
+       Marth carries energy for both. The over-matching this filter was guarding
+       against is already handled by the two-token minimum below. */
+    const words = fq.split(' ').filter(Boolean);
+    if(words.length >= 2){
+      const all = POKEMON.filter(p=>{
+        const n = flat(p.speciesName);
+        return words.every(w => n.split(' ').some(t => t === w || t.startsWith(w)));
+      });
+      if(all.length) return byShortest(all);
     }
     // fuzzy: base names only, distance ≤ 2 (same tolerance as search)
     let best = null, bestD = 3;
@@ -5152,6 +5287,24 @@ function findSleepers(X, opts){
     const bOnA = aBoard.find(k=>k.c.speciesId===b.speciesId);
     const A = esc(a.speciesName), B = esc(b.speciesName);
     let out, conf = 'leaning';
+
+    /* ⚠ ASYMMETRIC BLINDNESS — and getting this wrong in the safe-looking
+       direction would be its own defect. A mon that is off the boards can never
+       appear as a candidate, so the question "does IT beat the other one" has no
+       answer here. But the reverse question is still perfectly answerable: a
+       normal mon can still show up on a mega's board. So this refuses the half
+       it cannot see and keeps the half it can, rather than throwing away a
+       sound verdict for tidiness. Blanket-refusing both directions would be
+       failing safe in the wrong direction — silence where a real answer existed. */
+    const aBlind = offTheBoards(a), bBlind = offTheBoards(b);
+    if(aBlind && bBlind){
+      return {state:'shrug', conf:'low', html:
+        `I can't rule on <b>${A}</b> vs <b>${B}</b> — <b>both</b> are Mega or Primal, and this ` +
+        `engine keeps those off every board because they can't be brought to GO Battle League. ` +
+        `That's <b>no reading</b>, not an even fight. I'd rather say nothing than invent a winner.`};
+    }
+    const blindName = aBlind ? A : bBlind ? B : null;
+    const unseen = aBlind ? `whether ${A} beats ${B}` : bBlind ? `whether ${B} beats ${A}` : null;
     if(aOnB && (!bOnA || aOnB.tier < bOnA.tier)){
       out = `<b>${A} wins.</b> It sits at Tier ${aOnB.tier} on ${B}'s own nightmare board` +
             (aOnB.viaType ? ` — the pressure comes through <b>${esc(String(aOnB.viaType))}</b>.` : '.');
@@ -5162,6 +5315,16 @@ function findSleepers(X, opts){
       if(bOnA.tier===1){ out += ` ${A} should never take this fight.`; conf = 'high'; }
     } else if(aOnB && bOnA){
       out = `They threaten <b>each other</b> — both appear on each other's boards at Tier ${aOnB.tier}. This one comes down to shields and who charges first.`;
+    } else if(blindName){
+      /* THE BRANCH THAT WAS LYING. Reaching here with one side off the boards
+         used to print "Neither hard-counters the other... even fight, play it
+         clean" — a confident verdict built on a lookup that was never allowed
+         to succeed. Absence of the mega from the board was read as evidence. */
+      return {state:'shrug', conf:'low', html:
+        `I can't call this one. <b>${blindName}</b> is a Mega, and this engine keeps Megas off ` +
+        `every board because they can't be brought to GO Battle League — so I was never able to ` +
+        `check ${unseen}. What I <b>can</b> say is that the other one doesn't hard-counter it. ` +
+        `That's half the picture, and I'm not going to pretend it's the whole one.`};
     } else {
       out = `Neither hard-counters the other — the engine doesn't put either on the other's nightmare board. It'll come down to <b>shields, energy, and who baits better</b>. Even fight; play it clean.`;
     }
@@ -5182,11 +5345,25 @@ function findSleepers(X, opts){
     let out = seated
       ? `That one's on your squad, so this is <b>your kit</b>, exactly as you set it: `
       : `Best kit the engine picks for <b>${esc(mon.speciesName)}</b>: `;
+    /* ⚠ SAME TWO-SHAPES TRAP as switchToSquadMon: an engine pick carries .nuke,
+       a seated squad entry carries .charged. Reading only .nuke meant that for
+       any mon actually ON his squad — the case this branch exists to serve —
+       Sprocket named the fast and the bait and then just stopped, never saying
+       the nuke. It read as a complete sentence, which is why it survived. */
+    const kitNuke = kit.nuke || kit.charged;
     out += `fast <b>${esc(nm(kit.fast))}</b>`;
     if(kit.bait) out += `, bait <b>${esc(nm(kit.bait))}</b>`;
-    if(kit.nuke) out += `, nuke <b>${esc(nm(kit.nuke))}</b>`;
+    if(kitNuke) out += `, nuke <b>${esc(nm(kitNuke))}</b>`;
     out += '.';
-    if(!seated && kit.bait && kit.nuke) out += ` Bait with the cheap one, close with the big one — that's the whole game.`;
+    /* the 4th move — his actual ask. Named as GRANTED so it never reads as a
+       third thing he has to go and pick. */
+    const bl = bonusMovesOf(mon);
+    if(bl.length){
+      out += ` And it Mega Evolves, so it also gets ` +
+        bl.map(m=>`<b>${esc(m.name)}</b> (${m.power} power, ${m.energy} energy)`).join(' and ') +
+        ` — granted by the Mega, not something you pick or can TM off.`;
+    }
+    if(!seated && kit.bait && kitNuke) out += ` Bait with the cheap one, close with the big one — that's the whole game.`;
     // seated = your own set (a fact, not a read); engine pick = confidence from the nuke margin.
     const conf = seated ? 'high' : (kit.conf || 'leaning');
     return {state:'answer', html:out, conf};

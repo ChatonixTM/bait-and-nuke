@@ -1214,6 +1214,48 @@
     background:var(--panel-2);
     color:var(--text);
   }
+  /* ── THE MEGA BONUS SLOT ────────────────────────────────────────────────
+     Deliberately NOT a <select>. Mega Evolution grants this move; Marth did
+     not pick it and cannot TM it off, so a dropdown would offer a choice the
+     game does not have. It matches the height and radius of the selects beside
+     it so the row still reads as one instrument, but it is visibly inert —
+     no chevron, no pointer, dashed edge. The game itself tags it in pink; this
+     borrows the app's own signal colour rather than importing Niantic's. */
+  .bonus-slot{
+    font-family:var(--sans);
+    font-size:13px;
+    padding:9px 10px;
+    border-radius:8px;
+    border:1px dashed var(--signal-dim);
+    background:rgba(var(--glow-rgb),0.06);
+    color:var(--text);
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    flex-wrap:wrap;
+    cursor:default;
+  }
+  /* the label row: `.moveset-picker label` is flex-column, so without this the
+     tag drops onto its own line and the slot reads as two headings. */
+  .bonus-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .bonus-slot b{font-weight:600;}
+  .bonus-num{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .bonus-tag{
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    padding:1px 5px;
+    border-radius:4px;
+    background:rgba(var(--glow-rgb),0.16);
+    color:var(--signal);
+    cursor:help;
+  }
   .iv-preset-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
   .iv-preset-btn{
     font-family:var(--sans);
