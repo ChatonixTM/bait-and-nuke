@@ -1641,6 +1641,9 @@
     line-height:1.4; color:var(--text-dim); opacity:.75;
   }
   .nm-turns{ opacity:.7; font-size:8.5px; letter-spacing:.02em; }
+  /* the mega bonus move on a nightmare card — the one thing that is genuinely
+     different between a mega and its base when both land on the same board. */
+  .nm-bonus{ color:var(--signal); font-weight:600; white-space:nowrap; }
   /* v46: tap-tooltip bubble — explanations, finally reachable by thumb. */
   .tap-tip{
     position:absolute; z-index:1300; padding:9px 12px;
@@ -1966,6 +1969,22 @@
   }
   .cup-name-btn:hover{color:var(--signal);}
   .cup-banner-sub{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);margin-top:2px;}
+  /* ⚠ THE CAVEAT THAT NEVER REACHED THE SCREEN. `note` has sat on the Evolution
+     Cup since it was written — "this filter is type-based, so it cannot enforce
+     that rule" — and nothing read it. An honest admission written down and never
+     shown is the same as not admitting it. Amber, because it is a limit of the
+     tool speaking, not a feature. */
+  .cup-banner-note{
+    font-family:var(--mono);
+    font-size:10.5px;
+    line-height:1.5;
+    color:var(--amber, #e5b567);
+    margin-top:6px;
+    padding:6px 8px;
+    border-left:2px solid var(--amber, #e5b567);
+    background:rgba(229,181,103,0.07);
+    border-radius:0 6px 6px 0;
+  }
   .cup-picker{
     margin-top:8px;
     font-family:var(--mono);

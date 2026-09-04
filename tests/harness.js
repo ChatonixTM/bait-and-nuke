@@ -14,7 +14,7 @@ global.cupFilterActive = false; global.selectedCupIndex = 0; global.CUPS = [];
 // A version that derived the closure automatically would not need remembering.
 const code = extract(['PRESSURE_REF','NM_LOADOUTS','defMult','nmEps','nmDpe','nmTurns','nmPressure',
                       'findNightmares','cycleStats','moveRole','pickDefaultLoadout',
-                      'bonusMovesOf','offTheBoards']);
+                      'bonusMovesOf','offTheBoards','isMegaOrPrimal','cupContext']);
 (0, eval)(code.replace(/\bfunction (\w+)/g, 'globalThis.$1 = function $1'));
 const gm = JSON.parse(fs.readFileSync(require('path').join(__dirname,'..','gamemaster.json'),'utf8'));
 global.TYPE_CHART = gm.typeChart;

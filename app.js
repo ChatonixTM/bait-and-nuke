@@ -100,10 +100,81 @@ function bonusMovesOf(mon){
    ⚠ IT DOES NOT SUPPRESS THE MON ANYWHERE ELSE — you can still search a mega,
    read its moves, see its own board. It only means it is not offered as a pick
    against somebody else. */
-function offTheBoards(idOrMon){
+/* the plain fact, with no policy attached — "is this a mega or a primal form".
+   Split out on Obito's note: `offTheBoards(x)` was being called with one
+   argument in two places to mean exactly this, which worked but read as
+   something else, and a future change to the single-argument behaviour of
+   `offTheBoards` would have silently broken them with nothing at the call site
+   to notice. One name per question. */
+function isMegaOrPrimal(idOrMon){
   const id = typeof idOrMon === 'string' ? idOrMon : (idOrMon && idOrMon.speciesId) || '';
   const name = (typeof idOrMon === 'object' && idOrMon && idOrMon.speciesName) || '';
   return /_mega|_primal/.test(id) || /\(Mega|\(Primal/.test(name);
+}
+
+function offTheBoards(idOrMon, cupCtx){
+  /* ⭐ CUP-AWARE, Sept 4 2026. Marth: *"the cups should be updated because this
+     is now a standing feature."* He was right about the scale of it — Niantic's
+     next season runs a Mega Edition format in SEVEN of twelve weekly rotations,
+     so a blanket exclusion is not a small staleness, it is the app being wrong
+     more often than it is right.
+
+     ⚠ IT READS A FIELD, NOT THE NAME. The only thing that previously said megas
+     were legal was the words "Megas allowed" inside the cup's NAME. Matching
+     that string would have worked today and broken on the first mega cup named
+     differently — matching a MENTION instead of measuring a PROPERTY, which is
+     the defect this house repeats most.
+
+     ⚠ AND THE MATH NEEDED NOTHING. The real cups temporarily reduce a mega's CP
+     to the league cap, which is exactly what `cappedProduct()` already does to
+     every candidate — so a mega is scaled down like everything else rather than
+     bulldozing a 1500 board. Verified against Niantic's own announcement, not
+     assumed. Master League: Mega Edition stays excluded for the reason already
+     written at the CUPS header: it has no cap and requires actual mega
+     evolution, which this cup model cannot express. */
+  if(cupCtx && cupCtx.megasAllowed) return false;
+  return isMegaOrPrimal(idOrMon);
+}
+
+/* ⚠ ONE ANSWER TO "WHICH CUP ARE WE REASONING ABOUT", because the app had two
+   and they disagreed. The banner reasons about `CUPS[selectedCupIndex]` — which
+   defaults to the LIVE cup, picked by the clock, with no click required. The
+   boards reasoned about `cupFilterActive ? CUPS[selectedCupIndex] : null`, so
+   they only ever saw a cup after he clicked the cup name.
+
+   THAT SPLIT IS FINE FOR THE TYPE FILTER and must stay: narrowing search to a
+   cup's types is opt-in, and always was. It is NOT fine for mega legality,
+   because the banner would sit there saying "Now in GBL: Mega Edition week,
+   Megas allowed" directly above a board that had silently dropped every mega —
+   the app contradicting itself on his screen, which is the state he found it in.
+
+   The banner ALREADY changes on a date rollover with no user action. Boards
+   following the banner is consistency, not surprise. */
+function cupContext(){
+  if(typeof CUPS === 'undefined' || !CUPS.length) return null;
+  const c = CUPS[typeof selectedCupIndex === 'number' ? selectedCupIndex : 0] || null;
+  if(!c) return null;
+
+  /* ⚠⚠ A CUP'S RULES APPLY ONLY IN THE LEAGUE IT IS PLAYED IN — Shisui's catch,
+     and it was a hole in the first version of this very function. `cupContext`
+     returned the selected cup no matter which league the user was looking at,
+     so selecting the Great League mega cup and then switching the league
+     dropdown to Master let megas onto Master boards. He measured it: **45,382
+     mega candidate appearances**, with Mega Rayquaza and Mega Latias sitting at
+     Tier 2 in a league the cup does not govern.
+
+     That is the exact defect I had just written a comment congratulating myself
+     for avoiding at the CUPS header ("Master League: Mega Edition stays
+     excluded"). It was excluded by intention and nothing else.
+
+     ⚠ AND THE LEAGUE LIST IS A FIELD, NOT THE NAME. This cup's name reads
+     "GL · UL · ML, Megas allowed" and parsing that would be matching a mention
+     for the third time in one feature. `leagues` says it in data; absent, a cup
+     governs only its own declared league. */
+  const lg = (typeof LEAGUE_SELECT !== 'undefined' && LEAGUE_SELECT)
+    ? LEAGUE_SELECT.value : 'Great League';
+  const runsIn = (Array.isArray(c.leagues) && c.leagues.length) ? c.leagues : [c.league];
+  return runsIn.indexOf(lg) === -1 ? null : c;
 }
 
 const THEMES = {
@@ -1131,12 +1202,20 @@ function findNightmares(mon, limit){
   if(!myLo) return [];
   const myBulk = cappedProduct(mon.baseStats||{});
   const cup = cupFilterActive ? CUPS[selectedCupIndex] : null;
+  /* ⚠ TWO DIFFERENT QUESTIONS, DELIBERATELY NOT THE SAME VARIABLE.
+     `cup` above answers "am I narrowing search to this cup's types" — opt-in,
+     null until he clicks, and that stays exactly as it was.
+     `megaCup` answers "which cup is being played" — the one the banner already
+     names without a click. Collapsing them would either make mega legality
+     require a click he never mentioned using, or make the type filter apply
+     when he never asked for it. Both are wrong; they are separate questions. */
+  const megaCup = cupContext();
   const scored = [];
 
   POKEMON.forEach(c=>{
     if(c.speciesId === mon.speciesId) return;
     if(/_shadow$/.test(c.speciesId)) return;
-    if(offTheBoards(c)) return;   // one definition, asked — see offTheBoards()
+    if(offTheBoards(c, megaCup)) return;   // one definition, asked — see offTheBoards()
     const cTypes = (c.types||[]).filter(t=>t && t!=='none').map(t=>t.toLowerCase());
     if(!cTypes.length) return;
     const bs = c.baseStats || {};
@@ -1176,7 +1255,45 @@ function findNightmares(mon, limit){
       if(META){
         const score = META[c.speciesId];
         if(score === undefined){
-          viability = 0.20;                       // PvPoke doesn't rank it here
+          /* ⚠⚠ UNRANKED IS TWO DIFFERENT FACTS WEARING ONE VALUE, and this is
+             why the mega fix did nothing until it was measured. Letting megas
+             past `offTheBoards` was correct and changed NOTHING on the board:
+             every mega then landed here, scored 0.20, and never surfaced.
+
+             For a normal mon, absent from PvPoke's list is a JUDGEMENT — they
+             rated the league and did not consider it viable. 0.20 is right.
+             For a MEGA it is not a judgement at all. PvPoke does not rank megas
+             in these leagues because megas are normally illegal in them; the
+             list was never asked the question. Scoring that silence as 0.20 is
+             this house's own law broken again — VALUE / ABSENT / REFUSED, and
+             an empty answer is not a negative answer.
+
+             So a mega in a cup that allows megas falls through to the v60
+             stat-product proxy, which is exactly what the comment above already
+             promises the fallback is for ("mons missing from the rankings
+             file") — that branch just never fired per-mon, only when the whole
+             file was absent. Everything else keeps the flat 0.20 untouched. */
+          const megaHere = megaCup && megaCup.megasAllowed && isMegaOrPrimal(c);
+          /* ⚠⚠ AND WITH NO CAP THERE IS NO BASIS — WHICH IS NOT THE SAME AS NO
+             PENALTY. I first wrote `: 1` here, reasoning that the damping exists
+             for mons "crushed below their natural level to fit a cap", so with
+             no cap the reason evaporates. That reasoning was wrong in a way I
+             could not see from the code: in an uncapped league `viability` is no
+             longer measuring crushing at all, it is measuring META RELEVANCE —
+             ranked mons get (score-50)/45, and PvPoke's #1 Master pick only just
+             reaches 1.0. Handing every unranked mega a flat 1.0 placed all of
+             them above the best mon anybody has actually rated. Obito measured
+             the result: 40 of 300 Master boards with 7+ of 9 slots taken by
+             megas and primals.
+
+             The cap-shaped proxy is only defensible where there IS a cap. With
+             no cap there is no instrument, so this makes no claim — and the cup
+             data now keeps Master out of mega weeks entirely, which is the
+             honest place to say "we cannot measure this" rather than inventing a
+             number here and letting a board repeat it confidently. */
+          viability = (megaHere && CAP)
+            ? Math.min(1, Math.max(0.15, Math.pow((bulk / P_REF) / 0.85, 2.5)))
+            : 0.20;                               // PvPoke doesn't rank it here
         } else {
           // 60 -> 0.35, 75 -> 0.66, 85 -> 0.87, 95+ -> 1.00
           viability = Math.min(1, Math.max(0.20, (score - 50) / 45));
@@ -1224,6 +1341,33 @@ function findNightmares(mon, limit){
   scored.sort((a,b)=> a.tier - b.tier || b.threat - a.threat);
 
   const out = [], seen = new Set();
+
+  /* ⚠⚠ THE ACTUAL REASON MEGAS NEVER APPEARED — and neither of the two fixes
+     before it did a thing, which is the lesson. Letting them past
+     `offTheBoards` changed nothing; un-damping their viability changed nothing.
+     Both were real defects and neither was THIS one, and only measuring the
+     board showed that: 1 mega in 247 entries.
+
+     The board de-duplicates by BASE NAME — "Mewtwo (Mega Y)" collapses to
+     "Mewtwo". The base form is ranked by PvPoke and therefore sorts higher, so
+     it claims the slot every time and the mega is discarded as a duplicate of
+     itself. Only chesnaught_mega survived, because plain Chesnaught happened
+     not to make the board at all.
+
+     That rule is RIGHT in ordinary play: Shadow, Armored and Alolan variants of
+     one mon would otherwise flood a nine-slot board with the same face. It is
+     WRONG in a cup where megas are legal, because there the mega and its base
+     are two different combatants — different stats, different typing in several
+     cases, and an extra charged move the base does not have. Collapsing them
+     hides precisely the thing Marth asked to see.
+
+     ⚠ Narrow on purpose: ONLY a mega, ONLY in a cup that allows megas. Shadow
+     and Alolan forms still collapse exactly as before. */
+  const megaOK = !!(megaCup && megaCup.megasAllowed);
+  const dedupKey = k => (megaOK && isMegaOrPrimal(k.c))
+    ? k.c.speciesName                                   // its own combatant here
+    : k.c.speciesName.replace(/\s*\(.*\)$/,'');
+
   if(!limit || limit <= 9){
     // DISPLAY MODE (v38): pick the top 3 of EACH tier. The old top-9-overall
     // fill meant a mon with 9+ hard counters showed a Tier-1-only board —
@@ -1231,7 +1375,7 @@ function findNightmares(mon, limit){
     // The board promises three tiers; now it delivers them when they exist.
     const perTier = {1:0, 2:0, 3:0};
     for(const k of scored){
-      const base = k.c.speciesName.replace(/\s*\(.*\)$/,'');
+      const base = dedupKey(k);
       if(seen.has(base)) continue;
       if(perTier[k.tier] >= 3) continue;
       seen.add(base);
@@ -1242,7 +1386,7 @@ function findNightmares(mon, limit){
   } else {
     // DEEP MODE (scorer asks for 60): unchanged — raw threat order matters here.
     for(const k of scored){
-      const base = k.c.speciesName.replace(/\s*\(.*\)$/,'');
+      const base = dedupKey(k);
       if(seen.has(base)) continue;
       seen.add(base);
       out.push(k);
@@ -1291,7 +1435,19 @@ function nightmareBoardHTML(nightmares, monName, hintText){
                 <span title="Damage per energy of their nuke">💥 ${n.dpe.toFixed(2)}</span>
                 <span title="Real seconds to their cheapest move — turn-quantized, because energy only lands when a fast move finishes">⏱ ${n.pressure.ttc.toFixed(1)}s</span>
               </div>
-              <div class="nm-kit">${n.theirFast.name} <span class="nm-turns" title="Fast-move length — a 1-turn move is a scalpel, a 4-turn move is a commitment">(${n.pressure.turns}T)</span>${n.theirBait?` › ${n.theirBait.name}`:''} › ${n.theirNuke.name}</div>
+              <div class="nm-kit">${n.theirFast.name} <span class="nm-turns" title="Fast-move length — a 1-turn move is a scalpel, a 4-turn move is a commitment">(${n.pressure.turns}T)</span>${n.theirBait?` › ${n.theirBait.name}`:''} › ${n.theirNuke.name}${
+                /* ⚠ THE 4TH MOVE BELONGS HERE TOO. Rendered at 390px, a mega
+                   and its base sat side by side on the same board showing the
+                   IDENTICAL kit line — same moves, same numbers — because both
+                   read only fast/bait/nuke. The numbers really are the same
+                   (pressure and DPE are move-derived, and a mega learns the same
+                   moves), so the one honest difference on that card was the two
+                   words "(Mega)" in the name. The extra move is the thing that
+                   is actually different about it, and the picker already shows
+                   it; a board that hides it makes a real threat look like a
+                   duplicate row. */
+                (bonusMovesOf(n.c).map(m => ` <span class="nm-bonus" title="Mega Evolution bonus — granted, not chosen">+ ${m.name}</span>`).join(''))
+              }</div>
             </button>`).join('')}
         </div>
       </div>`;
@@ -1602,10 +1758,36 @@ function spriteImg(x, size, cls){
   // archive PokeAPI never had. Slug from the base species name; any miss
   // (regional forms, outages, offline) falls to the static PNG, then vanishes.
   const slug = String((x && x.speciesName) || '').toLowerCase().replace(/\s*\(.*\)$/,'').replace(/[^a-z0-9]/g,'');
-  const animSrc = dex <= 649
-    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${dex}.gif`
-    : (slug ? `https://play.pokemonshowdown.com/sprites/ani/${slug}.gif` : staticSrc);
-  return `<img class="sprite ${cls||''}" src="${animSrc}" width="${size}" height="${size}" loading="lazy" alt="" data-static="${staticSrc}" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}">`;
+
+  /* ⚠ A MEGA WAS SHOWING THE WRONG POKÉMON'S ARTWORK — Shisui's catch, and the
+     nastiest kind of wrong because nothing looked broken. Every mega shares its
+     base form's dex number (mewtwo_mega_y is dex 150, same as Mewtwo), and the
+     animated path keys off dex alone. So a "Mewtwo (Mega Y)" card returned
+     HTTP 200 and rendered plain Mewtwo's animation beside the correct label.
+     Not a missing image — a confident, valid picture of a different Pokémon.
+     It never mattered before because megas could not reach a board at all.
+
+     Showdown does carry the real mega art, under a hyphenated slug. Checked
+     against the live source, all 61 megas and primals in the roster: 61 of 61
+     resolve. The `onerror` chain below still falls to the static PNG and then
+     vanishes, so a future rename degrades instead of breaking. */
+  const megaSlug = /_mega|_primal/.test((x && x.speciesId) || '')
+    ? x.speciesId.replace(/_mega_([xy])$/, '-mega$1').replace(/_mega$/, '-mega').replace(/_primal$/, '-primal')
+    : null;
+  const animSrc = megaSlug
+    ? `https://play.pokemonshowdown.com/sprites/ani/${megaSlug}.gif`
+    : dex <= 649
+      ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${dex}.gif`
+      : (slug ? `https://play.pokemonshowdown.com/sprites/ani/${slug}.gif` : staticSrc);
+  /* ⚠ AND THE FALLBACK MUST NOT REINTRODUCE THE BUG. The static PNG is also
+     keyed by dex, so falling back to it for a mega lands on the base form's
+     picture — the exact wrong-Pokémon failure, one step later. A mega therefore
+     has NO static fallback: if the real art cannot load it vanishes. Safe in
+     which direction matters here, and the answer is not close — an empty space
+     tells him nothing, a confident picture of the wrong Pokémon tells him
+     something false. */
+  const fallback = megaSlug ? '' : staticSrc;
+  return `<img class="sprite ${cls||''}" src="${animSrc}" width="${size}" height="${size}" loading="lazy" alt="" data-static="${fallback}" onerror="if(this.dataset.static&amp;&amp;this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}">`;
 }
 
 // v45: THE SQUAD SWITCHER — the founder's ask, verbatim: "once a mon is
@@ -3258,9 +3440,48 @@ const CUPS = [
   { name: 'All Standard Leagues week (GL · UL · ML)', league: 'Great League', cpCap: 1500,
     types: ALL_TYPES, window: 'Aug 25 – Sep 1, 2026 · 4× Stardust', emoji: '⚔️',
     startISO: '2026-08-25T20:00:00Z', endISO: '2026-09-01T20:00:00Z', noTypeCup: true },
+  /* ⭐ megasAllowed — a real FIELD, added Sept 4 2026 on Marth's correction:
+       "nah the cups should be updated because this is now a standing feature,
+        hence why i even brought it up in the first place."
+     Until now the ONLY thing saying megas were legal here was the words "Megas
+     allowed" inside the cup's NAME. Reading that would have been matching a
+     mention instead of a property — this house's most-repeated defect — and it
+     would have broken on the first mega cup named differently. */
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
     types: ALL_TYPES, window: 'Sep 1 – Sep 8, 2026 · 4× Stardust', emoji: '💠',
-    startISO: '2026-09-01T20:00:00Z', endISO: '2026-09-08T20:00:00Z', noTypeCup: true },
+    startISO: '2026-09-01T20:00:00Z', endISO: '2026-09-08T20:00:00Z', noTypeCup: true,
+    megasAllowed: true,
+    /* ⚠⚠ MASTER IS DELIBERATELY NOT IN THIS LIST, and the first version of it
+       was — Obito's catch, measured rather than argued.
+
+       The cup's name reads "GL · UL · ML", so I listed all three. Then he swept
+       ~300 anchors per league: Great and Ultra produced ZERO mega-flooded
+       boards, and Master produced **40 of 300 boards where 7+ of 9 slots were
+       megas or primals**, with a mega top-scoring on every anchor he sampled.
+
+       THE CAUSE WAS MINE, one section up. In a capped league an unranked mega
+       falls back to the stat-product proxy, which discriminates properly. With
+       no cap I gave it a flat 1.0 — and PvPoke's own #1 Master mon (Metagross,
+       98) only just reaches 1.0, while Dialga, Garchomp and Jirachi land
+       0.65-0.86. Every unranked mega was therefore scored above the best mon
+       anyone has actually rated. That is not "removing a penalty whose cause is
+       gone", it is special pleading, which is the exact thing I asked him to
+       hunt for and did not see myself.
+
+       ⚠ AND THE CODE CONTRADICTED ITSELF IN ONE DIFF: `offTheBoards`'s own
+       comment says Master stays excluded, while this data said it did not. I
+       wrote both and reconciled neither.
+
+       So Master is out until there is a real baseline to score a mega against.
+       Great and Ultra stay, because the game caps megas there and the proxy is
+       measured to behave. The honest position is that we do not know what an
+       uncapped mega is worth here — not that it is worth everything. */
+    leagues: ['Great League', 'Ultra League'],
+    note: 'Megas are legal here, so these boards show them in Great and Ultra League. '
+        + 'Eligibility needs the Pokemon to actually BE Mega Evolved — an ownership and '
+        + 'energy requirement this tool cannot check, so read every mega as "if you have it". '
+        + 'Master League is left out on purpose: it has no CP cap, and with nothing to '
+        + 'scale a mega against this engine has no honest way to rank one there.' },
   { name: 'Fantasy Cup: Ultra League Edition', league: 'Ultra League', cpCap: 2500,
     types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
@@ -3346,7 +3567,15 @@ function renderCupBanner(){
   let typesDisplay;
   if(cup.types.length > 9){
     const excluded = allTypes.filter(t => !cup.types.includes(t));
-    typesDisplay = `all except ${excluded.map(cap).join('/')}`;
+    /* ⚠ "all except " WITH NOTHING AFTER IT — what the banner has been printing
+       for every open-type week, including the one live on Marth's phone today.
+       Five cups carry `noTypeCup: true` and allow all 18 types, so `excluded`
+       comes back EMPTY and the sentence just stops. An empty list was rendered
+       as though it were a list. Same shape as the law this house already knows:
+       absence is a state of its own, not a value to interpolate. */
+    typesDisplay = excluded.length
+      ? `all except ${excluded.map(cap).join('/')}`
+      : 'all types';
   } else {
     typesDisplay = cup.types.map(cap).join('/') + ' only';
   }
@@ -3356,6 +3585,20 @@ function renderCupBanner(){
     <div>
       <div class="cup-banner-text">${window.__bnCupScheduleStale ? '⚠️' : (cup.emoji || '🏆')} ${window.__bnCupScheduleStale ? 'Schedule out of date — check the live calendar' : (cup.live ? 'Now in GBL' : 'Previewing')}: <button class="cup-name-btn" id="cupNameBtn">${cup.name}</button></div>
       <div class="cup-banner-sub">${cup.league} · ≤${cup.cpCap} CP · ${typesDisplay} · ${cup.window}${cupFilterActive ? ' · <b style="color:var(--signal)">search filtered to this cup ✓</b>' : ' · click the cup name to filter search'}</div>
+      ${cup.note ? `<div class="cup-banner-note">⚠ ${cup.note}</div>` : ''}
+      ${/* ⚠ STALENESS NOW HAS TEETH IT DID NOT HAVE — Obito's second catch.
+            Past CUP_SCHEDULE_END the live-cup picker falls back to the last
+            cup that ENDED, and if that was a mega week the boards keep
+            repopulating with megas on a date when they may not be legal. The
+            existing "⚠️ Schedule out of date" line was written when the only
+            thing a stale cup could get wrong was a type filter — low stakes,
+            visible, easily ignored. It now silently covers whole boards
+            changing composition, so it has to say that specifically. */''}
+      ${window.__bnCupScheduleStale && cup.megasAllowed
+        ? `<div class="cup-banner-note">⚠ This mega week has <b>ended</b> and no newer schedule is
+             encoded, so these boards are still showing megas on a date when they may no longer be
+             legal. Check the live calendar before trusting a mega on a board.</div>`
+        : ''}
       <select class="cup-picker" id="cupPicker">
         ${CUPS.map((c,i)=>`<option value="${i}" ${i===selectedCupIndex?'selected':''}>${c.live ? '🏆 ' : (c.emoji || '')} ${c.name}</option>`).join('')}
       </select>
@@ -4933,7 +5176,7 @@ function findSleepers(X, opts){
     for(const cand of board){
       const id = cand.c.speciesId;
       if(id === X.speciesId) continue;
-      if(offTheBoards(id)) continue;                      // banned from GBL
+      if(offTheBoards(id, cupContext())) continue;         // banned from GBL, unless the cup says otherwise
       const w = (4 - cand.tier) * kWeight;
       const e = tally.get(id) || {mon: cand.c, score: 0, eats: []};
       e.score += w;
@@ -5296,7 +5539,13 @@ function findSleepers(X, opts){
        it cannot see and keeps the half it can, rather than throwing away a
        sound verdict for tidiness. Blanket-refusing both directions would be
        failing safe in the wrong direction — silence where a real answer existed. */
-    const aBlind = offTheBoards(a), bBlind = offTheBoards(b);
+    /* ⭐ THE REFUSAL LIFTS ITSELF when the cup allows megas. Sprocket refuses
+       because the engine genuinely cannot see a mega on a board — not because
+       "mega" is a word it dislikes. The moment a mega cup makes them real
+       candidates, the blindness is gone and so is the refusal: he gets a
+       straight verdict, from the same boards as everyone else. A refusal that
+       outlived its cause would be the twin of the bug it replaced. */
+    const aBlind = offTheBoards(a, cupContext()), bBlind = offTheBoards(b, cupContext());
     if(aBlind && bBlind){
       return {state:'shrug', conf:'low', html:
         `I can't rule on <b>${A}</b> vs <b>${B}</b> — <b>both</b> are Mega or Primal, and this ` +
