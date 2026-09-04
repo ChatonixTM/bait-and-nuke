@@ -2426,8 +2426,56 @@ SEARCH.addEventListener('keydown', e=>{
 // step — the app is still plain files you drag into Netlify, just more than one.
 let POKEMON_DATA = [], MOVES_DATA = {}, TYPE_CHART = {}, META_SCORES = {}, MOVE_FLAGS = {};
 
+/* ⚠⚠ DATA_VERSION — Marth's field test, Sept 4 2026, and it cost him a real
+   confusion before it cost anyone an hour.
+
+   He opened the app on his phone after the mega work shipped and reported:
+   *"Don't see the 3rd slot tho"* — with a screenshot whose own status line read
+   **"Loaded 1740 Pokémon · 347 moves"**. The shipped file is 1742 · 349. His
+   phone was serving a week-old `gamemaster.json`, because `_headers` caches it
+   `max-age=604800` and the fetch below asked for the same URL every time.
+
+   ⭐ AND HE DIAGNOSED IT WITHOUT KNOWING: *"the updated sprites are a good touch
+   tho"* — new sprites and old counts in the same breath. Sprites live in
+   `app.js`, which Netlify revalidates; the roster lives in a file cached for a
+   week. Two files, two caches, one of them a week behind. His two sentences
+   were the measurement.
+
+   The long cache is deliberate and stays — this app promises to work offline
+   and a cold fetch of 550KB on mobile data is not free. What changes is that a
+   NEW roster gets a NEW URL, so the stale copy is simply never asked for again.
+
+   ⚠ AND THE STAMP IS WRITTEN BY THE SYNC, NOT BY HAND. `refresh_roster.js`
+   rewrites this constant whenever it applies a roster. A version somebody has
+   to remember to bump is a version that is silently wrong the first busy day —
+   which is the same shape as the bug it is fixing. `megatest.js` fails if this
+   constant and the roster's own `syncedAt` ever disagree. */
+const DATA_VERSION = '2026-09-04';   // written by tests/refresh_roster.js --apply
+
+/* ⚠ THE STATUS LINE WAS CLAIMING SOMETHING IT COULD NOT CHECK. It read
+   "Loaded 1740 Pokémon · 347 moves — **full current roster**, synced from
+   PvPoke's source" — while serving a file a week old. Marth's exact words:
+   *"the version didnt tell me tho idk why"*. It did not tell him because it was
+   not reporting a version at all, it was asserting one, and the assertion was
+   hard-coded prose that could never be wrong on screen and was wrong in fact.
+
+   Now it says WHEN the roster is from, read off the roster itself, and says so
+   out loud when the copy in the browser is older than the app expects — which
+   is exactly the state he was in. A date he can compare beats an adjective he
+   has to trust. */
+let ROSTER_SYNCED_AT = null;
+function rosterLine(){
+  const n = `Loaded ${POKEMON.length} Pokémon · ${Object.keys(MOVES).length} moves`;
+  if(!ROSTER_SYNCED_AT) return `${n} — roster date unknown; this build expects ${DATA_VERSION}.`;
+  if(ROSTER_SYNCED_AT !== DATA_VERSION){
+    return `${n} — ⚠ this roster is from ${ROSTER_SYNCED_AT}, but this build ships ${DATA_VERSION}. `
+         + `You are seeing a cached copy — hard-refresh to get the current one.`;
+  }
+  return `${n} — roster synced ${ROSTER_SYNCED_AT} from PvPoke's source.`;
+}
+
 async function loadGameData(){
-  const res = await fetch('gamemaster.json');
+  const res = await fetch('gamemaster.json?v=' + DATA_VERSION);
   if(!res.ok) throw new Error('gamemaster.json failed to load (' + res.status + ')');
   const gm = await res.json();
   POKEMON_DATA = gm.pokemon;
@@ -2439,6 +2487,10 @@ async function loadGameData(){
   META_SCORES  = gm.metaScores || {};
   // v62: speciesId -> {e:[eliteMoveIds], l:[legacyMoveIds]}
   MOVE_FLAGS   = gm.moveFlags || {};
+  /* read off the file itself, never assumed — a roster that cannot say when it
+     is from reports that, rather than borrowing the build's date and looking
+     current. VALUE / ABSENT, not a confident guess. */
+  ROSTER_SYNCED_AT = (gm.rosterSource && gm.rosterSource.syncedAt) || null;
 }
 
 
@@ -2447,7 +2499,7 @@ function loadData(){
   POKEMON = POKEMON_DATA;
   searchIndex = POKEMON.map(p => ({name:p.speciesName, lower:p.speciesName.toLowerCase(), ref:p}));
 
-  STATUS.textContent = `Loaded ${POKEMON.length} Pokémon · ${Object.keys(MOVES).length} moves — full current roster, synced from PvPoke's source.`;
+  STATUS.textContent = rosterLine();
   SEARCH.disabled = false;
 }
 // ---- Guided tour for first-time users ----
@@ -3522,7 +3574,7 @@ function updateStatusForCup(){
     const matchCount = POKEMON.filter(p => (p.types||[]).some(t => cup.types.includes((t||'').toLowerCase()))).length;
     STATUS.textContent = `${matchCount} Pokémon eligible for ${cup.name} — search filtered to these only.`;
   } else {
-    STATUS.textContent = `Loaded ${POKEMON.length} Pokémon · ${Object.keys(MOVES).length} moves — full current roster, synced from PvPoke's source.`;
+    STATUS.textContent = rosterLine();
   }
 }
 

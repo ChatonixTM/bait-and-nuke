@@ -396,4 +396,33 @@ gm.rosterSource = { url: SRC, syncedAt: new Date().toISOString().slice(0, 10) };
 fs.writeFileSync(TARGET, JSON.stringify(gm));
 console.log(`\n  ✓ written: ${gm.pokemon.length} pokemon · ${Object.keys(gm.moves).length} moves`);
 console.log(`  stamped rosterSource.syncedAt = ${gm.rosterSource.syncedAt}`);
+
+/* ⚠⚠ AND STAMP THE CACHE-BUSTER, because Marth found what happens when nobody
+   does. `_headers` caches gamemaster.json for a WEEK, and the app fetched the
+   same URL every time — so after the mega work shipped he opened it on his
+   phone and reported "Don't see the 3rd slot tho", with a status line reading
+   1740 Pokémon against a shipped 1742. The data was right on the server and a
+   week old in his hand.
+
+   app.js now fetches `gamemaster.json?v=DATA_VERSION`, so a new roster is a new
+   URL and the stale copy is never asked for again. THIS is what keeps the two
+   in step: a version a person has to remember to bump is silently wrong the
+   first busy day, which is the same shape as the bug it fixes. */
+const APP = path.join(path.dirname(TARGET), 'app.js');
+try {
+  const before = fs.readFileSync(APP, 'utf8');
+  const after = before.replace(/const DATA_VERSION = '[^']*';/,
+    `const DATA_VERSION = '${gm.rosterSource.syncedAt}';`);
+  if (after === before) {
+    console.log(`  ⚠ COULD NOT STAMP DATA_VERSION in app.js — the constant was not found.`);
+    console.log(`    Set it to ${gm.rosterSource.syncedAt} by hand, or browsers will keep`);
+    console.log(`    serving the roster they already have for up to a week.`);
+  } else {
+    fs.writeFileSync(APP, after);
+    console.log(`  stamped app.js DATA_VERSION = ${gm.rosterSource.syncedAt}  (cache-buster)`);
+  }
+} catch (e) {
+  console.log(`  ⚠ COULD NOT READ app.js to stamp DATA_VERSION: ${e.message}`);
+}
+
 console.log(`  NOW RUN THE SUITE: npm test\n`);

@@ -101,6 +101,28 @@ const t = (name, ok, detail) => {
     !!cram && (cram.extraChargedMoves || []).length === 2,
     cram ? (cram.extraChargedMoves || []).join(', ') : 'ABSENT');
 
+  /* ⚠ THE STALE-DATA GUARD — Marth's field test is the reason this exists.
+     He opened the shipped app and reported "Don't see the 3rd slot tho", with a
+     status line reading 1740 Pokémon · 347 moves against a shipped 1742 · 349.
+     Nothing was broken on the server; `_headers` caches gamemaster.json for a
+     WEEK and the app asked for the same URL every time, so his phone kept a
+     copy from before the mega links existed. Every bench in this file was green
+     the whole time, because they all read the file off disk.
+     ⭐ HIS OWN SENTENCES WERE THE DIAGNOSIS: "the updated sprites are a good
+     touch tho" alongside the old counts — app.js fresh, roster a week behind. */
+  const appSrc = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const stamped = (appSrc.match(/const DATA_VERSION = '([^']*)'/) || [, null])[1];
+  t('app.js carries a DATA_VERSION cache-buster', !!stamped, String(stamped));
+  t('it matches the roster it ships with — a mismatch means a stale fetch URL',
+    stamped === gm.rosterSource.syncedAt,
+    'app ' + stamped + ' vs roster ' + gm.rosterSource.syncedAt);
+  t('the roster fetch is versioned, not a bare URL',
+    /fetch\('gamemaster\.json\?v='\s*\+\s*DATA_VERSION\)/.test(appSrc),
+    /fetch\('gamemaster\.json'\)/.test(appSrc) ? 'STILL A BARE URL' : 'versioned');
+  /* and the claim that misled him: prose asserting currency it cannot check */
+  t('the status line no longer claims "full current roster" as a fact',
+    !/full current roster, synced/.test(appSrc), 'claim removed');
+
   /* ---- PART 2: the app, driven in a real browser ------------------------ */
   const server = await require(path.join(__dirname, 'serve.js'))(ROOT, 8801);
   const b = await chromium.launch();
