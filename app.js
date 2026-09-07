@@ -3512,72 +3512,101 @@ const LEAGUES = ['Great League', 'Ultra League', 'Master League'];
 // Season ends Sep 8; re-encode when the next season's schedule drops.
 const ALL_TYPES = ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
 const CUPS = [
+  /* ═══ SEASON 28 · GO BATTLE LEAGUE "TWILIGHT TRAILS" · Sep 8 – Dec 1 2026 ═══
+     Re-encoded Sept 7 2026, the day before Season 27's schedule expired, at
+     Marth's word: "bait and nuke needs to be refreshed / updated cuz the cup
+     ends tmrw" and "bait and nuke can get a clock".
+
+     SOURCED, not remembered: the twelve-week rotation from pokemongo.com's
+     Twilight Trails post, cross-read on Leek Duck's per-cup pages and Pokémon
+     GO Hub; the per-cup eligibility rules from the same three. PvPoke was 403
+     to both readers and is NOT a witness here.
+
+     ⚠ THE UTC OFFSET CHANGES MID-SEASON AND NO SOURCE SAYS SO. Every source
+     gives the boundary as "1:00 p.m. PT" and nothing more. US daylight saving
+     ends Nov 1 2026, so 1pm PT is 20:00Z through Nov 1 and 21:00Z after it.
+     That conversion is ARITHMETIC DONE HERE, agreed independently by two
+     readers, and is not attributable to any of the sources — which is why it
+     is written down rather than quietly applied.
+
+     ⚠ AND THE NOVEMBER BOUNDARY IS BROKEN AT THE SOURCE. Niantic's own page
+     lists "Nov 10-17", then "Nov 18-25", then "Nov 24-Dec 1" — a one-day gap
+     and then a one-day overlap, around the in-person LAIC tournament. Leek
+     Duck and GO Hub reproduce the same anomaly, so it is not one outlet's
+     typo. It is encoded AS PUBLISHED and flagged; nobody here picked a
+     boundary the sources do not give. */
+  { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Sep 8 – Sep 15, 2026', emoji: '💠',
+    startISO: '2026-09-08T20:00:00Z', endISO: '2026-09-15T20:00:00Z', noTypeCup: true,
+    megasAllowed: true, leagues: ['Great League', 'Ultra League'],
+    /* the ownership/energy half of this note moved into renderCupBanner(), derived
+       from megasAllowed so all six mega cups carry it. What is left is the part that
+       is true of THIS cup and no other: which leagues it governs, and why Master is
+       deliberately absent. */
+    note: 'This week runs in Great and Ultra League here. Master League is left out on '
+        + 'purpose: it has no CP cap, and with nothing to scale a mega against this '
+        + 'engine has no honest way to rank one there.' },
+  { name: 'Willpower Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['fighting','psychic','dark'], window: 'Sep 15 – Sep 22, 2026', emoji: '💪',
+    startISO: '2026-09-15T20:00:00Z', endISO: '2026-09-22T20:00:00Z',
+    banned: ['Gardevoir', 'Zorua', 'Zoroark'], megasUnstated: true },
   { name: 'Retro Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
-    window: 'Jul 14 – Jul 21, 2026', emoji: '🕹️',
-    startISO: '2026-07-14T20:00:00Z', endISO: '2026-07-21T20:00:00Z' },
-  { name: 'All Standard Leagues week (GL · UL · ML)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Jul 21 – Jul 28, 2026 · 4× Stardust', emoji: '⚔️',
-    startISO: '2026-07-21T20:00:00Z', endISO: '2026-07-28T20:00:00Z', noTypeCup: true },
-  { name: 'Master Premier week (GL · Master Premier)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Jul 28 – Aug 4, 2026 · 4× Stardust', emoji: '🏟️',
-    startISO: '2026-07-28T20:00:00Z', endISO: '2026-08-04T20:00:00Z', noTypeCup: true },
-  // v64: rest of Season 27 encoded from Niantic's official schedule.
-  { name: 'Weather Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['fire','water','ice','rock'], window: 'Aug 4 – Aug 11, 2026', emoji: '🌦️',
-    startISO: '2026-08-04T20:00:00Z', endISO: '2026-08-11T20:00:00Z' },
-  { name: 'Evolution Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Aug 11 – Aug 18, 2026 · 4× Stardust', emoji: '🧬',
-    startISO: '2026-08-11T20:00:00Z', endISO: '2026-08-18T20:00:00Z', noTypeCup: true,
-    note: 'Only Pokémon that have evolved once and can evolve again are eligible — this filter is type-based, so it cannot enforce that rule.' },
-  { name: 'Scroll Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['water','fighting','dark'], window: 'Aug 18 – Aug 25, 2026', emoji: '📜',
-    startISO: '2026-08-18T20:00:00Z', endISO: '2026-08-25T20:00:00Z' },
-  { name: 'All Standard Leagues week (GL · UL · ML)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Aug 25 – Sep 1, 2026 · 4× Stardust', emoji: '⚔️',
-    startISO: '2026-08-25T20:00:00Z', endISO: '2026-09-01T20:00:00Z', noTypeCup: true },
-  /* ⭐ megasAllowed — a real FIELD, added Sept 4 2026 on Marth's correction:
-       "nah the cups should be updated because this is now a standing feature,
-        hence why i even brought it up in the first place."
-     Until now the ONLY thing saying megas were legal here was the words "Megas
-     allowed" inside the cup's NAME. Reading that would have been matching a
-     mention instead of a property — this house's most-repeated defect — and it
-     would have broken on the first mega cup named differently. */
+    window: 'Sep 22 – Sep 29, 2026', emoji: '🕹️',
+    startISO: '2026-09-22T20:00:00Z', endISO: '2026-09-29T20:00:00Z', megasUnstated: true },
+  { name: 'Mega Color Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['grass','fire','water','electric'], window: 'Sep 29 – Oct 6, 2026', emoji: '🎨',
+    startISO: '2026-09-29T20:00:00Z', endISO: '2026-10-06T20:00:00Z', megasAllowed: true },
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Sep 1 – Sep 8, 2026 · 4× Stardust', emoji: '💠',
-    startISO: '2026-09-01T20:00:00Z', endISO: '2026-09-08T20:00:00Z', noTypeCup: true,
+    types: ALL_TYPES, window: 'Oct 6 – Oct 13, 2026', emoji: '💠',
+    startISO: '2026-10-06T20:00:00Z', endISO: '2026-10-13T20:00:00Z', noTypeCup: true,
+    megasAllowed: true, leagues: ['Great League', 'Ultra League'] },
+  { name: 'Little Cup', league: 'Great League', cpCap: 500,
+    types: ALL_TYPES, window: 'Oct 13 – Oct 20, 2026', emoji: '🐣',
+    startISO: '2026-10-13T20:00:00Z', endISO: '2026-10-20T20:00:00Z', noTypeCup: true,
+    cannotFilter: 'Little Cup restricts by EVOLUTION STAGE, not type — only Pokemon that can '
+        + 'still evolve and never have. This tool filters by type, so it has no way to tell '
+        + 'you who qualifies. The board below is not a Little Cup board.' },
+  { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['dragon','steel','fairy'], window: 'Oct 20 – Oct 27, 2026', emoji: '🐉',
+    startISO: '2026-10-20T20:00:00Z', endISO: '2026-10-27T20:00:00Z', megasUnstated: true },
+  { name: 'Mega Halloween Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ['bug','poison','ghost','dark','fairy'], window: 'Oct 27 – Nov 3, 2026', emoji: '🎃',
+    startISO: '2026-10-27T20:00:00Z', endISO: '2026-11-03T21:00:00Z', megasAllowed: true },
+  { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Nov 3 – Nov 10, 2026', emoji: '💠',
+    startISO: '2026-11-03T21:00:00Z', endISO: '2026-11-10T21:00:00Z', noTypeCup: true,
+    megasAllowed: true, leagues: ['Great League', 'Ultra League'] },
+  { name: '2026 GO LAIC Cup', league: 'Great League', cpCap: 1500,
+    types: ['normal','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
+    window: 'Nov 10 – Nov 17, 2026', emoji: '🏆',
+    startISO: '2026-11-10T21:00:00Z', endISO: '2026-11-17T21:00:00Z',
+    banned: ['Chansey','Snorlax','Furret','Wobbuffet','Galarian Corsola','Kingdra','Medicham',
+             'Altaria','Dusclops','Jellicent','Araquanid','Oranguru','Annihilape','Clodsire'],
+    cannotFilter: 'The LAIC Cup bans fourteen Pokemon BY NAME on top of its type rule, and also '
+        + 'excludes every Legendary, Mythical and Ultra Beast, and Megas are not eligible in the '
+        + 'GBL version. This tool filters by type alone, so a type-eligible Pokemon here may still '
+        + 'be banned. Read the live calendar before you build.' },
+  { name: '2026 GO LAIC Cup (second week, as published)', league: 'Great League', cpCap: 1500,
+    types: ['normal','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
+    window: 'Nov 18 – Nov 25, 2026', emoji: '🏆',
+    startISO: '2026-11-18T21:00:00Z', endISO: '2026-11-25T21:00:00Z',
+    banned: ['Chansey','Snorlax','Furret','Wobbuffet','Galarian Corsola','Kingdra','Medicham',
+             'Altaria','Dusclops','Jellicent','Araquanid','Oranguru','Annihilape','Clodsire'],
+    scheduleAnomaly: 'Niantic\'s own schedule leaves Nov 17-18 with no cup listed, and lists '
+        + 'Nov 24-25 twice. Encoded exactly as published; nobody here picked a boundary. '
+        + 'Check the live calendar around those two days.',
+    cannotFilter: 'Same fourteen banned Pokemon, Legendaries, Mythicals and Ultra Beasts as the '
+        + 'first LAIC week, and Megas are not eligible. Type filtering cannot see any of it.' },
+  { name: 'Mega Catch Cup: Great League Edition', league: 'Great League', cpCap: 1500,
+    types: ALL_TYPES, window: 'Nov 24 – Dec 1, 2026', emoji: '🎣',
+    startISO: '2026-11-24T21:00:00Z', endISO: '2026-12-01T21:00:00Z', noTypeCup: true,
     megasAllowed: true,
-    /* ⚠⚠ MASTER IS DELIBERATELY NOT IN THIS LIST, and the first version of it
-       was — Obito's catch, measured rather than argued.
-
-       The cup's name reads "GL · UL · ML", so I listed all three. Then he swept
-       ~300 anchors per league: Great and Ultra produced ZERO mega-flooded
-       boards, and Master produced **40 of 300 boards where 7+ of 9 slots were
-       megas or primals**, with a mega top-scoring on every anchor he sampled.
-
-       THE CAUSE WAS MINE, one section up. In a capped league an unranked mega
-       falls back to the stat-product proxy, which discriminates properly. With
-       no cap I gave it a flat 1.0 — and PvPoke's own #1 Master mon (Metagross,
-       98) only just reaches 1.0, while Dialga, Garchomp and Jirachi land
-       0.65-0.86. Every unranked mega was therefore scored above the best mon
-       anyone has actually rated. That is not "removing a penalty whose cause is
-       gone", it is special pleading, which is the exact thing I asked him to
-       hunt for and did not see myself.
-
-       ⚠ AND THE CODE CONTRADICTED ITSELF IN ONE DIFF: `offTheBoards`'s own
-       comment says Master stays excluded, while this data said it did not. I
-       wrote both and reconciled neither.
-
-       So Master is out until there is a real baseline to score a mega against.
-       Great and Ultra stay, because the game caps megas there and the proxy is
-       measured to behave. The honest position is that we do not know what an
-       uncapped mega is worth here — not that it is worth everything. */
-    leagues: ['Great League', 'Ultra League'],
-    note: 'Megas are legal here, so these boards show them in Great and Ultra League. '
-        + 'Eligibility needs the Pokemon to actually BE Mega Evolved — an ownership and '
-        + 'energy requirement this tool cannot check, so read every mega as "if you have it". '
-        + 'Master League is left out on purpose: it has no CP cap, and with nothing to '
-        + 'scale a mega against this engine has no honest way to rank one there.' },
+    scheduleAnomaly: 'Overlaps the published LAIC week on Nov 24-25 — Niantic lists both. '
+        + 'Encoded as published.',
+    cannotFilter: 'Only Pokemon CAUGHT during Twilight Trails (Sep 8 - Dec 1) are eligible, and '
+        + 'Mythicals are excluded. This tool cannot see when you caught anything, so it cannot '
+        + 'tell you who qualifies.' },
   { name: 'Fantasy Cup: Ultra League Edition', league: 'Ultra League', cpCap: 2500,
     types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
@@ -3593,7 +3622,7 @@ const CUPS = [
 // v63: the encoded schedule has an end date. Once the clock passes it we are
 // guessing, so the app says so instead of quietly showing a dead cup. Extend
 // CUPS with the next season's startISO/endISO values to clear the warning.
-const CUP_SCHEDULE_END = '2026-09-08T20:00:00Z';  // end of Season 27
+const CUP_SCHEDULE_END = '2026-12-01T21:00:00Z';  // end of Season 28 (Twilight Trails); 1pm PST = 21:00Z
 (function(){
   const now = Date.now();
   let liveIdx = -1, lastEnded = -1, lastEndT = -Infinity;
@@ -3608,8 +3637,62 @@ const CUP_SCHEDULE_END = '2026-09-08T20:00:00Z';  // end of Season 27
   window.__bnCupDefault = pick;
   // Past the end of what we encoded, no cup is genuinely live.
   window.__bnCupScheduleStale = now >= Date.parse(CUP_SCHEDULE_END);
+  /* ⚠ THIS RAN ONCE, AT LOAD, AND NEVER AGAIN. A page left open across a
+     Tuesday rotation kept showing the previous cup as live, and a page left
+     open past the whole season's end never noticed. The boolean is kept for
+     the first paint; bnCupRecheck() below is what makes it a clock. */
 })();
 let selectedCupIndex = window.__bnCupDefault ?? 0;
+
+/* ═══ THE CLOCK — Marth, Sept 7 2026: "bait and nuke can get a clock" ═══
+   The schedule was a snapshot with an expiry date and no way to see the date
+   coming: it said nothing at all until the morning it was already wrong. Now
+   the banner carries the time left in the live cup, and the time left in the
+   whole encoded season, and it keeps counting while the page is open.
+   ⚠ IT RE-PICKS THE LIVE CUP, not just the words. The old staleness flag was
+     computed once at load; a page open across a Tuesday 1pm rotation kept
+     naming the old cup as live. */
+function bnCupLeft(ms){
+  if(!(ms > 0)) return null;
+  const d = Math.floor(ms/86400000), h = Math.floor(ms/3600000)%24, m = Math.floor(ms/60000)%60;
+  if(d >= 1) return d + (d===1?' day ':' days ') + h + (h===1?' hour':' hours');
+  if(h >= 1) return h + (h===1?' hour ':' hours ') + m + (m===1?' minute':' minutes');
+  return m + (m===1?' minute':' minutes');
+}
+function bnCupRecheck(){
+  const now = Date.now();
+  let liveIdx = -1;
+  CUPS.forEach((c,i)=>{ if(!c.startISO) return;
+    if(now >= Date.parse(c.startISO) && now < Date.parse(c.endISO)) liveIdx = i; });
+  const wasLive = CUPS.findIndex(c=>c.live);
+  CUPS.forEach((c,i)=> c.live = (i === liveIdx));
+  const wasStale = window.__bnCupScheduleStale;
+  window.__bnCupScheduleStale = now >= Date.parse(CUP_SCHEDULE_END);
+  return (wasLive !== liveIdx) || (wasStale !== window.__bnCupScheduleStale);
+}
+/* one interval for the page, started after the first render; a minute is fine
+   for a schedule whose smallest unit is a week, and costs nothing measurable */
+let bnClockTimer = null;
+function bnStartClock(){
+  if(bnClockTimer) return;
+  bnClockTimer = setInterval(()=>{
+    const moved = bnCupRecheck();
+    const el = document.getElementById('cupClock');
+    if(moved){ if(typeof renderCupBanner === 'function') renderCupBanner(); return; }
+    if(el) el.textContent = bnCupClockText();
+  }, 60000);
+}
+function bnCupClockText(){
+  const cup = CUPS[selectedCupIndex];
+  const now = Date.now();
+  const seasonLeft = bnCupLeft(Date.parse(CUP_SCHEDULE_END) - now);
+  if(!seasonLeft) return 'the encoded schedule ran out — nothing below is live';
+  if(cup && cup.live && cup.endISO){
+    const l = bnCupLeft(Date.parse(cup.endISO) - now);
+    if(l) return l + ' left in this cup · ' + seasonLeft + ' left in the encoded season';
+  }
+  return seasonLeft + ' left in the encoded season';
+}
 
 function updateStatusForCup(){
   if(!POKEMON.length) return; // roster not loaded yet
@@ -3680,8 +3763,38 @@ function renderCupBanner(){
     <button class="cup-min-btn" id="cupMinBtn" aria-label="Minimize banner">▴</button>
     <div>
       <div class="cup-banner-text">${window.__bnCupScheduleStale ? '⚠️' : (cup.emoji || '🏆')} ${window.__bnCupScheduleStale ? 'Schedule out of date — check the live calendar' : (cup.live ? 'Now in GBL' : 'Previewing')}: <button class="cup-name-btn" id="cupNameBtn">${cup.name}</button></div>
-      <div class="cup-banner-sub">${cup.league} · ≤${cup.cpCap} CP · ${typesDisplay} · ${cup.window}${cupFilterActive ? ' · <b style="color:var(--signal)">search filtered to this cup ✓</b>' : ' · click the cup name to filter search'}</div>
+      <div class="cup-banner-sub">${cup.league} · ≤${cup.cpCap} CP · ${typesDisplay} · ${cup.window}${cup.cannotFilter ? ' · <b>this cup cannot be filtered here</b>' : (cupFilterActive ? ' · <b style="color:var(--signal)">search filtered to this cup ✓</b>' : ' · click the cup name to filter search')}</div>
+      <div class="cup-banner-sub" id="cupClock">${bnCupClockText()}</div>
       ${cup.note ? `<div class="cup-banner-note">⚠ ${cup.note}</div>` : ''}
+      ${cup.scheduleAnomaly ? `<div class="cup-banner-note">⚠ ${cup.scheduleAnomaly}</div>` : ''}
+      ${cup.megasUnstated ? `<div class="cup-banner-note">⚠ Whether Mega Evolved Pokemon are legal in this cup is <b>not stated</b> by any source we read — not stated is not the same as no. Check the live calendar.</div>` : ''}
+      ${cup.cannotFilter ? `<div class="cup-banner-note">⛔ ${cup.cannotFilter}</div>` : ''}
+      ${/* ⚠ A BANLIST THIS FILTER CANNOT ENFORCE MUST BE NAMED — Obito's seventh
+            sitting, and he proved it in a browser rather than arguing it. Willpower
+            Cup bans Gardevoir, Zorua and Zoroark BY NAME, and all three pass its
+            fighting/psychic/dark type rule — so clicking the cup name filtered the
+            search, counted them among the eligible, and said nothing. That is not
+            a missing warning, it is a specific checkable FALSE CLAIM of eligibility.
+            The LAIC weeks escaped it only because they also carry `cannotFilter`.
+            ⚠ DERIVED FROM `banned`, NOT HAND-COPIED INTO EACH CUP'S NOTE. The bug
+            below this one is what a hand-copied caveat does on the sixth cup. */''}
+      ${Array.isArray(cup.banned) && cup.banned.length
+        ? `<div class="cup-banner-note">⚠ <b>${cup.banned.length} Pokémon are banned from this cup by name</b>, on top of its type rule:
+             ${cup.banned.join(', ')}. The search filter here matches on TYPE only and cannot see a banlist,
+             so a Pokémon can pass the filter and still be ineligible.</div>`
+        : ''}
+      ${/* ⚠ AND THE MEGA OWNERSHIP CAVEAT IS DERIVED TOO. It was written into ONE
+            cup's `note` by hand and six cups now carry `megasAllowed` — so five of
+            them said nothing, and megatest's own 'cup with no caveat' CONTROL
+            happily selected a MEGA-LEGAL cup as its example of nothing-to-warn-about.
+            Correct on the one item reached, silent on the other five: the shape this
+            house treats as disqualifying. Read from the flag, so the next mega cup
+            carries it without anybody remembering. */''}
+      ${cup.megasAllowed
+        ? `<div class="cup-banner-note">⚠ Megas are legal in this cup, so these boards show them. Eligibility needs the
+             Pokémon to actually BE Mega Evolved — an ownership and energy requirement this tool cannot check —
+             so read every mega as "if you have it".</div>`
+        : ''}
       ${/* ⚠ STALENESS NOW HAS TEETH IT DID NOT HAVE — Obito's second catch.
             Past CUP_SCHEDULE_END the live-cup picker falls back to the last
             cup that ENDED, and if that was a mega week the boards keep
@@ -3709,14 +3822,24 @@ function renderCupBanner(){
   });
   document.getElementById('cupNameBtn').addEventListener('click', ()=>{
     cancelCupAutoCollapse();
+    /* ⚠ A CUP THIS TOOL CANNOT REPRESENT MUST NOT BE FILTERABLE. Little Cup
+       restricts by evolution stage, the LAIC cups ban fourteen Pokemon by name,
+       Mega Catch restricts by WHEN you caught it — none of which a type filter
+       can see. Filtering by type there would tell somebody they qualify when
+       they do not, which is worse than not filtering at all. The banner says
+       so and the button refuses, so the words and the behaviour agree. */
+    if(CUPS[selectedCupIndex] && CUPS[selectedCupIndex].cannotFilter){ cupFilterActive = false; renderCupBanner(); return; }
     cupFilterActive = !cupFilterActive;
     renderCupBanner();
     updateStatusForCup();
     renderSquad();
+    bnStartClock();
   });
   document.getElementById('cupPicker').addEventListener('change', (e)=>{
     cancelCupAutoCollapse();
     selectedCupIndex = Number(e.target.value);
+    if(CUPS[selectedCupIndex] && CUPS[selectedCupIndex].cannotFilter) cupFilterActive = false;
+    bnStartClock();
     renderCupBanner();
     updateStatusForCup();
     renderSquad();
@@ -3746,6 +3869,16 @@ function cupEligibilityWarning(memberTypes){
   return eligible ? null : `Unqualified for ${cup.name}`;
 }
 renderCupBanner();
+/* ⚠ AND THE CLOCK STARTS HERE, WHICH IS THE WHOLE POINT OF IT — Gohan, Sept 7
+   2026, measured on the real page rather than read: bnStartClock() was called
+   from the cup-name click and the picker change and NOWHERE ELSE, so #cupClock
+   painted one true value at load and then froze for ever. Anybody who simply
+   LOOKED at the banner — which is most people — still had the exact defect the
+   clock was built to fix, and the countdown sat there looking current while it
+   was not. A feature reachable only by an unrelated interaction is not shipped.
+   ⚠ The click path also toggles the cup filter, so the only way to start the
+      clock was to change something else about the page. That is the tell. */
+bnStartClock();
 
 const ACCOUNT_KEY = 'recon-account';
 const TIER_CAPS = {free: 0, scout: 1, vanguard: 3};

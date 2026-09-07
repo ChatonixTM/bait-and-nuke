@@ -69,12 +69,19 @@ node tests/metatest.js && node tests/flagtest.js
 The script merges additively and **aborts if `pokemon`, `moves`, or
 `typeChart` counts change**, so it cannot damage core data.
 
-## ⚠ Cup schedule expires 2026-08-04
+## ⚠ Cup schedule expires 2026-12-01
 `CUPS` in `app.js` is encoded with real UTC start/end dates through
-**2026-08-04**. Past that, `CUP_SCHEDULE_END` trips and the banner shows
+**2026-12-01T21:00:00Z** (end of Season 28, "Twilight Trails"). Past that, `CUP_SCHEDULE_END` trips and the banner shows
 "Schedule out of date — check the live calendar" instead of pretending a dead
 cup is live. To extend: add the next season's entries with `startISO`/`endISO`
 and move `CUP_SCHEDULE_END` to the new final date.
+
+⚠ This line said **2026-08-04** until Sept 7 2026 — two seasons stale, while the
+code it describes said Sep 8. A doc about an expiry date that had itself expired.
+⚠ And the November boundaries are **21:00Z, not 20:00Z**: US daylight saving ends
+Nov 1 2026 and every source states the rotation only as "1:00 p.m. PT". That
+conversion is arithmetic done here, agreed by two readers, sourced from nobody.
+`cuptiptest.js` probes 2026-11-03T20:30:00Z for exactly this.
 
 ## Release gate
 All suites green → deploy → md5 the raw GitHub files against the local build.

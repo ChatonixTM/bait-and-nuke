@@ -216,7 +216,7 @@ const t = (name, ok, detail) => {
      the refusal LIFTS, which nothing checked before. */
   const said = await p.evaluate(async () => {
     /* pin a cup where megas are NOT legal — the world the refusal is for */
-    selectedCupIndex = CUPS.findIndex(c => !c.megasAllowed && c.startISO);
+    selectedCupIndex = CUPS.findIndex(c => !c.megasAllowed && !c.megasUnstated && c.startISO && !c.noTypeCup);
     const ask = async q => {
       document.getElementById('coachInput').value = q;
       document.querySelector('.coach-send').click();
@@ -265,7 +265,7 @@ const t = (name, ok, detail) => {
      that justified it would be the twin of the bug it replaced — Sprocket
      staying silent about a matchup it can now actually see. */
   const lifted = await p.evaluate(async () => {
-    selectedCupIndex = CUPS.findIndex(c => c.megasAllowed);
+    selectedCupIndex = CUPS.findIndex(c => c.megasAllowed && c.noTypeCup && /Mega Edition week/.test(c.name));
     document.getElementById('coachInput').value = 'mewtwo mega y vs gyarados';
     document.querySelector('.coach-send').click();
     await new Promise(r => setTimeout(r, 400));
@@ -315,7 +315,8 @@ const t = (name, ok, detail) => {
      nobody sees. */
   console.log('\n--- megas on the boards, when the cup allows them ---');
   const cups = await p.evaluate(() => {
-    const pick = want => CUPS.findIndex(c => !!c.megasAllowed === want && c.startISO);
+    const pick = want => want ? CUPS.findIndex(c => c.megasAllowed && c.noTypeCup && /Mega Edition week/.test(c.name))
+      : CUPS.findIndex(c => !c.megasAllowed && !c.megasUnstated && c.startISO && !c.noTypeCup);
     const boardFor = (anchor, idx) => {
       selectedCupIndex = idx;
       const big = findNightmares(POKEMON.find(x => x.speciesId === anchor), 500);
@@ -355,11 +356,29 @@ const t = (name, ok, detail) => {
      One flag, one cup, asserted. If a second mega cup is ever legitimately
      added, this line goes red on purpose and every findIndex above must be
      changed to name its cup instead of taking whichever comes first. */
+  /* ⚠ THIS ASSERTION DID ITS JOB, AND THEN HAD TO CHANGE — Sept 7 2026.
+     It said exactly ONE cup may carry `megasAllowed`, and it went red the hour
+     Season 28 landed six. That was not a false alarm and it was not widened to
+     make it quiet: its own comment above had already written the cure — every
+     findIndex must NAME the cup it grades — and all ten lookups in this file now
+     do, so the property that protected them has moved.
+     ⚠ WHAT ACTUALLY PROTECTS THEM NOW is not 'one mega cup exists'. It is that
+     the cup they name is UNAMBIGUOUS. Six mega cups are fine; two all-leagues
+     Mega Edition weeks sharing one window would put us straight back to grading
+     a substitute while the report stayed green, and that is what this goes red
+     for. A guard that changes when the world changes must change to the harder
+     question, never to the easier one. */
   const megaFlagged = await p.evaluate(() =>
-    CUPS.map((c, i) => ({ i, name: c.name, on: !!c.megasAllowed })).filter(c => c.on));
-  t('exactly ONE cup carries megasAllowed — findIndex cannot grade a substitute',
-    megaFlagged.length === 1,
-    megaFlagged.length + ' flagged: ' + megaFlagged.map(c => c.name).join(' | '));
+    CUPS.map((c, i) => ({ i, name: c.name, on: !!c.megasAllowed, all: !!c.noTypeCup,
+      win: c.startISO ? c.startISO + '→' + c.endISO : null })).filter(c => c.on));
+  const named = megaFlagged.filter(c => c.all && /Mega Edition week/.test(c.name));
+  t('the mega cup these checks NAME is findable, among however many carry the flag',
+    megaFlagged.length > 0 && named.length > 0,
+    megaFlagged.length + ' carry megasAllowed, ' + named.length + ' are all-leagues Mega Edition weeks');
+  const windows = new Set(named.map(c => c.win));
+  t('and it is unambiguous — no two all-leagues mega weeks share a window',
+    windows.size === named.length,
+    named.map(c => c.name + ' ' + c.win).join(' | '));
   /* KNOWN ANSWER, not ">0": before this work exactly ONE mega reached a
      247-entry board, and it was an accident — plain Chesnaught happened to miss
      the board so its mega escaped the base-name dedup. */
@@ -394,7 +413,7 @@ const t = (name, ok, detail) => {
   const leagues = await p.evaluate(() => {
     const setL = v => { const s = document.getElementById('leagueSelect');
                         s.value = v; s.dispatchEvent(new Event('change')); };
-    const megaIdx = CUPS.findIndex(c => c.megasAllowed);
+    const megaIdx = CUPS.findIndex(c => c.megasAllowed && c.noTypeCup && /Mega Edition week/.test(c.name));
     const megasOn = a => findNightmares(POKEMON.find(x => x.speciesId === a), 500)
       .filter(k => /_mega|_primal/.test(k.c.speciesId)).length;
     const out = {};
@@ -410,7 +429,7 @@ const t = (name, ok, detail) => {
     out.inItsOwnLeague = cupContext() ? 'APPLIES' : 'null';
     CUPS[megaIdx].leagues = saved;
     /* a plain Great-League cup must not govern Master either */
-    selectedCupIndex = CUPS.findIndex(c => !c.megasAllowed && c.startISO);
+    selectedCupIndex = CUPS.findIndex(c => !c.megasAllowed && !c.megasUnstated && c.startISO && !c.noTypeCup);
     setL('Master League');
     out.plainAtMaster = cupContext() ? 'APPLIES' : 'null';
     setL('Great League');
@@ -446,7 +465,7 @@ const t = (name, ok, detail) => {
   const flood = await p.evaluate(() => {
     const setL = v => { const s = document.getElementById('leagueSelect');
                         s.value = v; s.dispatchEvent(new Event('change')); };
-    selectedCupIndex = CUPS.findIndex(c => c.megasAllowed);
+    selectedCupIndex = CUPS.findIndex(c => c.megasAllowed && c.noTypeCup && /Mega Edition week/.test(c.name));
     const anchors = ['azumarill','medicham','registeel','skarmory','lickitung','swampert',
                      'altaria','bastiodon','umbreon','galvantula','dialga','garchomp',
                      'metagross','melmetal','giratina_altered','gyarados','talonflame','abomasnow'];
@@ -560,14 +579,31 @@ const t = (name, ok, detail) => {
   console.log('\n--- the banner tells the truth ---');
   const banner = await p.evaluate(() => {
     const out = {};
-    const megaIdx = CUPS.findIndex(c => c.megasAllowed);
+    const megaIdx = CUPS.findIndex(c => c.megasAllowed && c.noTypeCup && /Mega Edition week/.test(c.name));
     selectedCupIndex = megaIdx; renderCupBanner();
     out.sub = document.querySelector('.cup-banner-sub').textContent.replace(/\s+/g, ' ').trim();
     const n = document.querySelector('.cup-banner-note');
+    /* ⚠ EVERY BOX, NOT THE FIRST. The ownership caveat used to be the only note a
+       mega cup rendered, so reading `querySelector` was the same as reading them
+       all. Now the banlist and the ownership caveat are derived and a cup can
+       carry several — and this line quietly began grading whichever happened to
+       be printed first (Sept 7 2026). */
     out.note = n ? n.textContent.replace(/\s+/g, ' ').trim() : null;
-    const plainIdx = CUPS.findIndex(c => !c.megasAllowed && c.types.length <= 9);
-    selectedCupIndex = plainIdx; renderCupBanner();
-    out.plainNote = document.querySelector('.cup-banner-note') ? 'shown' : null;
+    out.allNotes = [...document.querySelectorAll('.cup-banner-note')]
+      .map(x => x.textContent.replace(/\s+/g, ' ').trim());
+    /* ⚠ AND IT CANNOT BE A DATED CUP ANY MORE, WHICH IS THE POINT. Once the mega
+       ownership caveat became derived from `megasAllowed`, every dated Season-28
+       cup carried a caveat of some kind — which is correct, and left this control
+       with nothing to stand on. It selects a genuinely caveat-free cup wherever one
+       lives (the undated legacy entries), and the assertion below refuses when none
+       exists, because a control that silently selects nothing passes forever. */
+    const plainIdx = CUPS.findIndex(c => !c.note && !c.megasUnstated && !c.megasAllowed
+      && !c.cannotFilter && !c.scheduleAnomaly && !c.banned);
+    out.plainCup = plainIdx >= 0 ? CUPS[plainIdx].name : null;
+    if (plainIdx >= 0) { selectedCupIndex = plainIdx; renderCupBanner(); }
+    out.plainNote = plainIdx >= 0
+      ? (document.querySelector('.cup-banner-note') ? 'shown' : null)
+      : 'NO CAVEAT-FREE CUP EXISTS';
     return out;
   });
   /* the banner printed "all except " with nothing after it on every open-type
@@ -577,8 +613,21 @@ const t = (name, ok, detail) => {
     /all types/.test(banner.sub) && !/all except\s*·/.test(banner.sub), banner.sub.slice(0, 60));
   /* `note` sat on the Evolution Cup since it was written and NOTHING read it —
      an honest admission recorded and never shown is not an admission. */
-  t('the cup caveat actually renders', !!banner.note && /Mega Evolved/.test(banner.note),
+  t('the mega ownership caveat renders on a mega cup, in whichever box carries it',
+    Array.isArray(banner.allNotes) && banner.allNotes.some(x => /Mega Evolved/.test(x)),
     banner.note ? banner.note.slice(0, 50) + '…' : 'STILL NOT RENDERED');
+  /* ⚠ SELECTED BY THE PROPERTY IT IS ABOUT, not by a proxy that used to agree.
+     This control read the FIRST non-mega dated cup, because in Season 27 that
+     cup happened to carry no caveat. In Season 28 every dated non-mega cup
+     carries one — megasUnstated, a banned list, or a cannotFilter reason — so
+     the control went red while the code was right. A control that selects by a
+     proxy is testing the proxy (Sept 7 2026). */
+  t('CONTROL: a caveat-free cup exists at all to test against',
+    banner.plainCup !== undefined && banner.plainCup !== null,
+    /* the detail prints on a PASS too, so it must read true in both cases — it
+       said 'no cup exists' while the check was green, which is a report lying
+       quietly about a healthy run (Sept 7 2026). */
+    'chose: ' + String(banner.plainCup));
   t('CONTROL: a cup with no caveat shows no caveat box', banner.plainNote === null,
     String(banner.plainNote));
 
@@ -589,7 +638,7 @@ const t = (name, ok, detail) => {
      only get a type filter wrong; it now silently covers whole boards changing
      composition, so it has to name that. */
   const stale = await p.evaluate(() => {
-    selectedCupIndex = CUPS.findIndex(c => c.megasAllowed);
+    selectedCupIndex = CUPS.findIndex(c => c.megasAllowed && c.noTypeCup && /Mega Edition week/.test(c.name));
     window.__bnCupScheduleStale = true; renderCupBanner();
     /* ⚠ NORMALISE THE WHITESPACE BEFORE MATCHING. The banner's text comes from a
        multi-line template literal, so `textContent` carries the newline and the
@@ -600,14 +649,22 @@ const t = (name, ok, detail) => {
     const on = [...document.querySelectorAll('.cup-banner-note')]
       .map(n => n.textContent.replace(/\s+/g, ' ').trim());
     window.__bnCupScheduleStale = false; renderCupBanner();
-    const off = [...document.querySelectorAll('.cup-banner-note')].length;
+    const offText = [...document.querySelectorAll('.cup-banner-note')]
+      .map(n => n.textContent.replace(/\s+/g, ' ').trim());
     return { staleCount: on.length, saysMega: on.some(x => /may no longer be legal/i.test(x)),
-             freshCount: off };
+             staleText: on, freshCount: offText.length, freshText: offText,
+             freshSaysMega: offText.some(x => /may no longer be legal/i.test(x)) };
   });
+  /* ⚠ THESE COUNTED BOXES AND NOW READ THEM. Both said "there are exactly N
+     caveat boxes", which was a true proxy for "the stale warning is present"
+     only while a mega cup rendered exactly one caveat. The moment the banlist
+     and the ownership caveat became derived, the counts moved and both lines
+     went red while the warning they exist for was on screen, correct and
+     visible. A count is a proxy; the sentence is the property (Sept 7 2026). */
   t('an expired mega week warns that boards may still be showing megas',
-    stale.staleCount === 2 && stale.saysMega, stale.staleCount + ' notes');
-  t('CONTROL: no such warning while the schedule is current', stale.freshCount === 1,
-    stale.freshCount + ' note');
+    stale.saysMega, stale.staleCount + ' notes: ' + (stale.staleText || []).join(' // ').slice(0, 160));
+  t('CONTROL: no such warning while the schedule is current',
+    !stale.freshSaysMega, stale.freshCount + ' notes: ' + (stale.freshText || []).join(' // ').slice(0, 160));
 
   console.log('\n--- the secret clicker draws from the LIVE meta ---');
   /* Marth spotted this one himself: "we may need to update the randomized
