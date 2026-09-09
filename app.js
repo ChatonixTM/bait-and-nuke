@@ -1230,7 +1230,24 @@ function findNightmares(mon, limit){
     const mine  = bestHit(myLo.moves, myTypes, cTypes);
     const typeRatio = their.best / Math.max(0.4, mine.best);
 
-    const sp       = nmPressure(cLo, cLo.charged);
+    /* ⚠ THE BONUS MOVE COUNTS FOR PRESSURE, AND IT DID NOT UNTIL NOW. The
+       board predicted this exact trap when megas were still excluded: "a mega's
+       bonus move is sometimes cheaper than both its picks (Skarmory Mega's
+       Drill Peck+ is 35e) - so if megas go on the boards, shield pressure must
+       count the bonus move or it will understate them. Harmless today only
+       because megas are excluded."
+       They are not excluded any more. offTheBoards reads cupCtx.megasAllowed,
+       and a Mega Edition week ran live from 2026-09-08 with five more encoded
+       through December. MEASURED against the shipped bonusMovesOf rather than a
+       re-implementation: 61 megas and primals, 13 carry a bonus move, and THREE
+       carry one cheaper than every move in their normal pool - skarmory_mega
+       (50e vs 35e), falinks_mega (40e vs 35e), raichu_mega_x (40e vs 35e).
+       Each of those had its shield pressure understated on a live board.
+       ⚠ THE BONUS MOVE IS STILL NOT PICKABLE. `charged` is untouched; only the
+       list handed to nmPressure widens. A granted move is real damage the mon
+       can throw, which is what pressure measures, and it is not a move anyone
+       chooses, which is what `charged` means. */
+    const sp       = nmPressure(cLo, cLo.charged.concat(cLo.bonus || []));
     const theirDPE = nmDpe(cLo.nuke, cTypes);
     const bulk     = cappedProduct(bs);
     const bulkW    = 0.5 + bulk / P_REF;

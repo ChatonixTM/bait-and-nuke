@@ -576,6 +576,69 @@ const t = (name, ok, detail) => {
     !/\s\+\s/.test(kits.megaNoBonus), kits.megaNoBonus);
   t('CONTROL: an ordinary mon is unchanged', !/\s\+\s/.test(kits.plain), kits.plain);
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     THE PRESSURE MATH ITSELF, DRIVEN RATHER THAN MOCKED.
+
+     ⚠ THE THREE CHECKS ABOVE HAND nightmareBoardHTML A FAKE `pressure`
+     OBJECT. That is correct for a RENDERING test — it asks what the card
+     draws — but it meant the one bench touching megas AND pressure never ran
+     the pressure calculation once, and the calculation was wrong.
+
+     The board predicted this while megas were still excluded: a mega's bonus
+     move is sometimes cheaper than both its picks, so once megas reach the
+     boards, shield pressure must count it or understate them. It named
+     Skarmory Mega's Drill Peck+ at 35e. Megas reached the boards on Sept 8
+     and nmPressure was still handed `charged`, which by design leaves the
+     granted move out.
+
+     KNOWN ANSWERS, measured off gamemaster.json through the shipped
+     bonusMovesOf rather than a re-implementation: skarmory_mega picks bottom
+     out at 50e against a 35e bonus; falinks_mega and raichu_mega_x are 40e
+     against 35e. Only 3 of 61 megas are affected, which is exactly why the
+     controls matter more than the finding — a fix that moved every mon would
+     be changing something other than what it claims to.
+     ═══════════════════════════════════════════════════════════════════════ */
+  console.log('\n--- shield pressure counts the granted move ---');
+  const press = await p.evaluate(() => {
+    const one = id => {
+      const c = POKEMON.find(x => x.speciesId === id);
+      if (!c) return null;
+      const fl = c.fastMoves.map(i => MOVES[i]).filter(Boolean);
+      const cl = c.chargedMoves.map(i => MOVES[i]).filter(Boolean);
+      const d = pickDefaultLoadout(c, fl, cl);
+      const lo = { fast: d.fast, bait: d.bait, nuke: d.nuke, charged: cl, bonus: bonusMovesOf(c) };
+      const off = nmPressure(lo, lo.charged);
+      const on  = nmPressure(lo, lo.charged.concat(lo.bonus || []));
+      return { bonusCount: (lo.bonus || []).length, off: off.cheapest, on: on.cheapest,
+               offTurns: off.turns, onTurns: on.turns, offIdx: off.idx, onIdx: on.idx };
+    };
+    return { skarm: one('skarmory_mega'), falinks: one('falinks_mega'),
+             raichu: one('raichu_mega_x'), sableye: one('sableye_mega'), plain: one('skarmory') };
+  });
+  t('Skarmory Mega: the granted move IS the cheapest, and pressure now sees it',
+    press.skarm && press.skarm.off === 50 && press.skarm.on === 35,
+    press.skarm ? 'charged-only ' + press.skarm.off + 'e -> with bonus ' + press.skarm.on + 'e' : 'not found');
+  /* ⚠ THE FIRST VERSION OF THIS ASSERTED onTurns <= offTurns AND THAT IS
+     TRIVIALLY TRUE — turns is a CEILING, and it does not move for any of the
+     three: ceil(50/5) and ceil(35/5) are both 2 for Skarmory. A check that
+     cannot fail is not a check. What actually moves is the pressure INDEX,
+     because time-to-charge reads the energy itself and not the rounded turn
+     count. MEASURED: skarmory_mega 0.6098 -> 0.8621, falinks_mega 0.8621 ->
+     1.0000, raichu_mega_x 1.1905 -> 1.4706. That is the claim worth holding. */
+  t('and the pressure index actually RISES — the understatement was real, not cosmetic',
+    press.skarm && press.skarm.onIdx > press.skarm.offIdx,
+    press.skarm ? press.skarm.offIdx.toFixed(4) + ' -> ' + press.skarm.onIdx.toFixed(4) : 'not found');
+  t('Falinks Mega was understated the same way', press.falinks && press.falinks.off === 40 && press.falinks.on === 35,
+    press.falinks ? press.falinks.off + 'e -> ' + press.falinks.on + 'e' : 'not found');
+  t('Raichu Mega X was understated the same way', press.raichu && press.raichu.off === 40 && press.raichu.on === 35,
+    press.raichu ? press.raichu.off + 'e -> ' + press.raichu.on + 'e' : 'not found');
+  t('CONTROL: a mega with NO bonus move is unchanged',
+    press.sableye && press.sableye.bonusCount === 0 && press.sableye.off === press.sableye.on,
+    press.sableye ? press.sableye.off + 'e -> ' + press.sableye.on + 'e' : 'not found');
+  t('CONTROL: an ordinary mon is unchanged',
+    press.plain && press.plain.off === press.plain.on,
+    press.plain ? press.plain.off + 'e -> ' + press.plain.on + 'e' : 'not found');
+
   console.log('\n--- the banner tells the truth ---');
   const banner = await p.evaluate(() => {
     const out = {};
