@@ -1211,6 +1211,10 @@ function findNightmares(mon, limit){
      when he never asked for it. Both are wrong; they are separate questions. */
   const megaCup = cupContext();
   const scored = [];
+  /* the unrated group is NOT part of `scored` and never enters a tier. It is
+     attached to the returned array as a property, so every existing consumer
+     - findSleepers above all - iterates elements and never sees one. */
+  const unrated = [];
 
   POKEMON.forEach(c=>{
     if(c.speciesId === mon.speciesId) return;
@@ -1267,6 +1271,41 @@ function findNightmares(mon, limit){
     // don't list it in this league at all -> heavily damped, never Tier 1.
     // The v60 stat-product curve is kept ONLY as a fallback for mons missing
     // from the rankings file (e.g. brand-new releases not yet rated).
+    /* ⭐⭐ MASTER MEGAS LEAVE HERE, BEFORE ANY SCORE IS COMPUTED - Marth,
+       Sept 9 2026: "show megas in master as a seperate group."
+
+       ⚠ THE INTERCEPT IS ONE STEP EARLIER THAN IT LOOKS LIKE IT SHOULD BE, and
+       Itachi is the reason. The obvious place is the tier gate below, but for
+       an uncapped league the only viability branch that can fire for a mega is
+       the flat 0.20 - the exact shape already measured at 0% visibility. There
+       is no value to put in that gate, because the gate has no honest input.
+       So a mega in an uncapped league never enters the scoring at all.
+
+       ⚠ IT CARRIES NO TIER, AND THAT IS LOAD-BEARING. findSleepers weights
+       every entry by (4 - cand.tier). Handing one of these a placeholder tier
+       to make it "just work" with existing consumers would put the invented
+       number back one layer downstream, silently, in a feature nobody watching
+       the mega board would ever check. It is kept off the array entirely.
+
+       ⚠ AND THE ORDER IS typeRatio, THEN SHIELD PRESSURE, AND NOTHING ELSE.
+       Not viability, not threat, not cappedProduct: all three are calibrated
+       against a rated baseline that does not exist for a mega here, and using
+       one relabelled is the same invented number in a different font, which is
+       how two of the three failed attempts were built. typeRatio is a type-
+       chart fact about THIS matchup and pressure is measured against a fixed
+       kit constant, so neither claims a place in the Master metagame.
+
+       ⚠ GATED ON CAP === null, so Great and Ultra cannot be reached from here.
+       There a mega is scaled to the cap like everything else and is ranked
+       normally, which was already honest and is untouched. */
+    if(CAP === null && isMegaOrPrimal(c)){
+      unrated.push({c, offMult: their.best, viaType: their.via, viaCoverage: their.cov,
+                    myBest: mine.best, statSum, pressure: sp, dpe: theirDPE,
+                    theirFast: cLo.fast, theirBait: cLo.bait, theirNuke: cLo.nuke,
+                    typeRatio});
+      return;
+    }
+
     let viability = 1;
     if(CAP || META){
       if(META){
@@ -1410,6 +1449,21 @@ function findNightmares(mon, limit){
       if(out.length >= limit) break;
     }
   }
+  /* ⚠ A PROPERTY ON THE ARRAY, NOT AN EXTRA ELEMENT AND NOT A NEW RETURN
+     SHAPE. Changing what findNightmares returns would touch every consumer;
+     appending these as elements would put them in front of the sleeper scorer,
+     which weights by tier and would read undefined. This way they reach the
+     renderer and nothing else. */
+  unrated.sort((a,b)=> b.typeRatio - a.typeRatio || b.pressure.idx - a.pressure.idx);
+  /* ⚠ SIX, AND THE REASON I FIRST GAVE FOR IT WAS FALSE. I said it matched
+     the board's own scale of three per tier across three tiers - which comes
+     to nine, or to three, and never to six. Obito caught that the number was
+     undefended rather than wrong. The honest reason: the tiers above already
+     cost nine cards, and this block carries a paragraph of explanation before
+     its first card. Six fills two rows at his phone's width and keeps the
+     whole aside shorter than the thing it is an aside to, which is the shape
+     an unrated group should have next to a rated one. */
+  out.unratedMegas = unrated.slice(0, 6);
   return out;
 }
 const NM_LOADOUTS = new Map();
@@ -1428,7 +1482,17 @@ const NM_TIERS = {
 // Shared tiered board — one renderer, used by both the main result view and the
 // stacked mon-tabs, so the two can never drift apart.
 function nightmareBoardHTML(nightmares, monName, hintText){
-  if(!nightmares || !nightmares.length) return '';
+  /* ⚠ THIS USED TO READ `if(!nightmares || !nightmares.length) return ''` AND
+     IT FIRES BEFORE THE UNRATED BLOCK IS REACHED. A board with no ranked
+     entries but a non-empty unrated group would have rendered NOTHING - the
+     megas vanishing along with the empty board, silently. Obito swept all
+     1742 roster mons in Master during a mega week and it does not happen
+     today; nothing in the code guaranteed it could not. An obscure mon with
+     no real Master counters is not impossible, and a guard that returns
+     early on a condition it was written before is exactly the ordering trap
+     this house keeps a rule about. */
+  const unratedEarly = (nightmares && nightmares.unratedMegas) || [];
+  if((!nightmares || !nightmares.length) && !unratedEarly.length) return '';
   let html = `<div class="section-label" style="margin-top:16px;">😱 Worst nightmares — who preys on ${monName}</div>`;
   for(const t of [1,2,3]){
     const group = nightmares.filter(n => n.tier === t).slice(0,3);
@@ -1469,6 +1533,46 @@ function nightmareBoardHTML(nightmares, monName, hintText){
         </div>
       </div>`;
   }
+  /* ⭐ THE UNRATED GROUP - Marth, Sept 9 2026: "show megas in master as a
+     seperate group." It renders only when findNightmares put something there,
+     which happens only in an uncapped league during a week that allows megas.
+
+     ⚠ NO TIER WORD, NO SEVERITY COLOUR, NO POSITION NUMBERS. The three tiers
+     above are red, amber and dim and badged by rank, and reusing any of that
+     here would rebuild rank-by-colour after going to the trouble of removing
+     rank-by-score. The heading states the absence in plain words, because the
+     checking belongs on the surface a reader actually looks at.
+
+     ⚠ AND IT SAYS WHAT THE ORDER IS, so the order cannot be mistaken for a
+     verdict. These are sorted by how hard they hit YOUR mon and how fast they
+     charge - facts about this one matchup - not by any claim about where a
+     mega stands in Master League, which nobody has measured. */
+  const unrated = (nightmares && nightmares.unratedMegas) || [];
+  if(unrated.length){
+    html += `
+      <div class="nm-unrated">
+        <div class="nm-unrated-head">⭕ Megas in Master — <b>no rating exists</b></div>
+        <div class="nm-unrated-blurb">
+          Mega Edition week runs in Master League too, but Master has no CP cap and
+          nobody publishes mega rankings for it — so this app will not invent a score
+          for them. These are <b>not ranked against the tiers above</b> and are
+          <b>not ordered by strength</b>: they are sorted by how hard they hit this
+          Pokémon and how quickly they charge, which is all that can honestly be said.
+        </div>
+        <div class="nightmare-row">
+          ${unrated.map(n=>`
+            <button class="nightmare-card nm-unrated-card" data-nm="${n.c.speciesId}">
+              <div class="nm-name">${spriteImg(n.c, 26, 'sprite-nm')}${n.c.speciesName}</div>
+              <div class="nm-types">${(n.c.types||[]).filter(x=>x&&x!=='none').map(x=>typeBadgeHtml(x)).join('')}</div>
+              <div class="nm-why">Hits ${n.offMult.toFixed(2)}× with ${n.viaType}</div>
+              <div class="nm-kit">${n.theirFast.name} <span class="nm-turns">(${n.pressure.turns}T)</span>${n.theirBait?` › ${n.theirBait.name}`:''} › ${n.theirNuke.name}${
+                (bonusMovesOf(n.c).map(m => ` <span class="nm-bonus" title="Mega Evolution bonus — granted, not chosen">+ ${m.name}</span>`).join(''))
+              }</div>
+            </button>`).join('')}
+        </div>
+      </div>`;
+  }
+
   html += `<div class="nm-hint">${hintText}</div>`;
   return html;
 }
@@ -3555,14 +3659,23 @@ const CUPS = [
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
     types: ALL_TYPES, window: 'Sep 8 – Sep 15, 2026', emoji: '💠',
     startISO: '2026-09-08T20:00:00Z', endISO: '2026-09-15T20:00:00Z', noTypeCup: true,
-    megasAllowed: true, leagues: ['Great League', 'Ultra League'],
+    megasAllowed: true, leagues: ['Great League', 'Ultra League', 'Master League'],
     /* the ownership/energy half of this note moved into renderCupBanner(), derived
        from megasAllowed so all six mega cups carry it. What is left is the part that
        is true of THIS cup and no other: which leagues it governs, and why Master is
        deliberately absent. */
-    note: 'This week runs in Great and Ultra League here. Master League is left out on '
-        + 'purpose: it has no CP cap, and with nothing to scale a mega against this '
-        + 'engine has no honest way to rank one there.' },
+    /* ⚠ THIS NOTE USED TO SAY MASTER WAS LEFT OUT ON PURPOSE, and that was true
+       and is now false. The week itself always ran in Master - this cup's own
+       name says GL · UL · ML - and we omitted the league because the engine had
+       no honest way to rank a mega without a CP cap. Marth ruled on Sept 9 2026:
+       show them, apart, unrated. So the omission is gone and the reason it
+       existed is now stated on the board itself instead of hidden in a cup note.
+       A banner that contradicts the board is a thing this feature has already
+       done once. */
+    note: 'This week runs in Great, Ultra and Master League. In Great and Ultra a mega '
+        + 'is scaled to the cap like every other pick, so it is ranked normally. Master '
+        + 'has no cap and nobody rates megas there, so they are listed separately and '
+        + 'unrated rather than given a made-up score.' },
   { name: 'Willpower Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['fighting','psychic','dark'], window: 'Sep 15 – Sep 22, 2026', emoji: '💪',
     startISO: '2026-09-15T20:00:00Z', endISO: '2026-09-22T20:00:00Z',
@@ -3577,7 +3690,14 @@ const CUPS = [
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
     types: ALL_TYPES, window: 'Oct 6 – Oct 13, 2026', emoji: '💠',
     startISO: '2026-10-06T20:00:00Z', endISO: '2026-10-13T20:00:00Z', noTypeCup: true,
-    megasAllowed: true, leagues: ['Great League', 'Ultra League'] },
+    megasAllowed: true, leagues: ['Great League', 'Ultra League', 'Master League'],
+    /* the same week, and the same sentence. It said nothing here before, so a
+       reader arriving in October or November would have met an unrated group
+       with no explanation anywhere on the page. */
+    note: 'This week runs in Great, Ultra and Master League. In Great and Ultra a mega '
+        + 'is scaled to the cap like every other pick, so it is ranked normally. Master '
+        + 'has no cap and nobody rates megas there, so they are listed separately and '
+        + 'unrated rather than given a made-up score.' },
   { name: 'Little Cup', league: 'Great League', cpCap: 500,
     types: ALL_TYPES, window: 'Oct 13 – Oct 20, 2026', emoji: '🐣',
     startISO: '2026-10-13T20:00:00Z', endISO: '2026-10-20T20:00:00Z', noTypeCup: true,
@@ -3593,7 +3713,14 @@ const CUPS = [
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
     types: ALL_TYPES, window: 'Nov 3 – Nov 10, 2026', emoji: '💠',
     startISO: '2026-11-03T21:00:00Z', endISO: '2026-11-10T21:00:00Z', noTypeCup: true,
-    megasAllowed: true, leagues: ['Great League', 'Ultra League'] },
+    megasAllowed: true, leagues: ['Great League', 'Ultra League', 'Master League'],
+    /* the same week, and the same sentence. It said nothing here before, so a
+       reader arriving in October or November would have met an unrated group
+       with no explanation anywhere on the page. */
+    note: 'This week runs in Great, Ultra and Master League. In Great and Ultra a mega '
+        + 'is scaled to the cap like every other pick, so it is ranked normally. Master '
+        + 'has no cap and nobody rates megas there, so they are listed separately and '
+        + 'unrated rather than given a made-up score.' },
   { name: '2026 GO LAIC Cup', league: 'Great League', cpCap: 1500,
     types: ['normal','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
     window: 'Nov 10 – Nov 17, 2026', emoji: '🏆',

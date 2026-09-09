@@ -1,7 +1,20 @@
 // HARNESS — runs SHIPPED code from dist/index.html (standing rule #2). No re-implementation.
 const fs = require('fs');
 const { extract } = require(require('path').join(__dirname,'extract.js'));
-global.document = { getElementById: (id) => id === 'leagueSelect' ? { value: global.__LEAGUE || 'Great League' } : null };
+/* ⚠ ONE ELEMENT, NOT A NEW ONE EVERY CALL. This used to return a fresh
+   { value: ... } from each getElementById, and app.js reads the league two
+   ways: findNightmares calls getElementById fresh, while cupContext reads the
+   module-level const LEAGUE_SELECT captured once at eval. So half the app
+   followed the league and half of it was frozen at Great League forever.
+   A synthetic Mega Edition week governing only Great and Ultra put
+   sableye_mega on a MASTER board, because cupContext believed it was in Great
+   League. In a browser LEAGUE_SELECT is the live element and this cannot
+   happen; the fixture was lying, not the app. One object, live getter, and a
+   setter so writing to it moves the league as the real element does. */
+const LEAGUE_EL = { get value(){ return global.__LEAGUE || 'Great League'; },
+                    set value(v){ global.__LEAGUE = v; },
+                    dispatchEvent(){ return true; } };
+global.document = { getElementById: (id) => id === 'leagueSelect' ? LEAGUE_EL : null };
 global.cupFilterActive = false; global.selectedCupIndex = 0; global.CUPS = [];
 /* ═══════════════════════════════════════════════════════════════════════════
    NOTHING IS REMEMBERED HERE ANY MORE — board rule 135, executed.
@@ -24,7 +37,12 @@ global.cupFilterActive = false; global.selectedCupIndex = 0; global.CUPS = [];
    the graph does not reach is simply absent and the eval throws a
    ReferenceError exactly as it always did — a crash, not a wrong number.
 
-   ⚠ ONLY THREE BENCHES USE THIS FILE - flagtest, leaguetest and metatest.
+   ⚠ FIVE BENCHES USE THIS FILE - flagtest, leaguetest, metatest, and as of
+   Sept 9 2026 mastertest and masterbaseline. This line said THREE, and I wrote
+   the three while correcting a different miscount in the same file on the same
+   day, then made it stale myself hours later by adding two more callers. Semiu
+   found it. A count typed into a comment is a receipt used as a pointer, and
+   the honest form is to read the directory: grep -l "require.*harness" tests/.
    I said five, because I grepped for the word "harness" instead of for a
    require of it, and coachtest and sleepertest mention it in a comment about
    an older bug. A mention is not a use, which is the defect this house repeats

@@ -1630,6 +1630,27 @@
     font-family:var(--sans); font-size:11px; line-height:1.5;
     color:var(--text-dim); margin-bottom:8px;
   }
+  /* THE UNRATED GROUP - megas in an uncapped league, where no rating exists.
+     DELIBERATELY NOT A TIER: no red, no amber, no badge, no rank colour. A
+     dashed neutral rule and a gap, so it reads as an aside rather than as a
+     fourth and weaker tier. Borrowing the tier palette here would rebuild
+     rank-by-colour immediately after rank-by-score was removed. */
+  .nm-unrated{
+    margin:20px 0 4px; padding:10px 0 0 10px;
+    border-left:3px dashed var(--line);
+    border-top:1px solid var(--line);
+  }
+  .nm-unrated-head{
+    font-family:var(--sans); font-size:13px; color:var(--text-dim);
+    margin-bottom:3px;
+  }
+  .nm-unrated-blurb{
+    font-family:var(--sans); font-size:11px; line-height:1.5;
+    color:var(--text-dim); margin-bottom:8px; max-width:60ch;
+  }
+  /* and the cards themselves stay neutral - no severity border at all */
+  .nightmare-card.nm-unrated-card{border-color:var(--line); border-style:dashed;}
+
   .nightmare-card.t1{border-color:rgba(224,72,77,.35);}
   .nightmare-card.t2{border-color:rgba(214,154,0,.32);}
   .nm-stats{
