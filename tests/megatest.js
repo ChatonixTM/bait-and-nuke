@@ -639,6 +639,66 @@ const t = (name, ok, detail) => {
     press.plain && press.plain.off === press.plain.on,
     press.plain ? press.plain.off + 'e -> ' + press.plain.on + 'e' : 'not found');
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     THE COACH ANSWERS, CALLED RATHER THAN READ.
+
+     Marth, Sept 10 2026: "Everywhere master appears." Four surfaces were
+     fixed and the node bench asserted three of them against SOURCE TEXT,
+     because they are nested inside the coach closure and node never runs it.
+     Semiu ruled that BLIND and Ino proved it: she disabled the real branch
+     while leaving every literal string intact and the bench stayed 36/36
+     green; a dead `let megaSeen = 0;` satisfied a check; and gutting a
+     confidence downgrade while leaving the identifier satisfied another.
+
+     A named door was opened in app.js so these can be CALLED. Here they are
+     called, in a real browser, and asserted on what they return.
+     ═══════════════════════════════════════════════════════════════════════ */
+  console.log('\n--- the coach answers, driven in the browser ---');
+  const coach = await p.evaluate(() => {
+    if(!window.__bnCoach) return { missing: true };
+    const megaIdx = CUPS.findIndex(c => c.megasAllowed && Array.isArray(c.leagues) &&
+                                        c.leagues.indexOf('Master League') !== -1);
+    const mon = id => POKEMON.find(x => x.speciesId === id);
+    const run = (lg, cupIdx) => {
+      selectedCupIndex = cupIdx; LEAGUE_SELECT.value = lg;
+      const mega = mon('sableye_mega'), foe = mon('mewtwo');
+      const v = __bnCoach.voiceMatchup(mega, foe);
+      const c = __bnCoach.voiceCounters(foe);
+      const o = __bnCoach.voiceOpinionMon(foe);
+      const s = __bnCoach.voiceSleepers(foe);
+      const strip = h => String(h || '').replace(/<[^>]+>/g, '');
+      return { verdict: v.state, verdictText: strip(v.html),
+               counters: strip(c.html), opinion: strip(o.html), sleepers: strip(s.html) };
+    };
+    return { megaIdx, master: run('Master League', megaIdx), great: run('Great League', megaIdx) };
+  });
+
+  t('the coach door exists — these answers can be called, not merely read', !coach.missing);
+  t('Master: a Mega versus a ranked mon is REFUSED, not given a verdict',
+    !coach.missing && coach.master.verdict === 'shrug',
+    coach.missing ? 'no door' : coach.master.verdict);
+  t('and the refusal says WHY — no cap, nobody rates Megas there',
+    !coach.missing && /no CP cap/i.test(coach.master.verdictText) &&
+    /unrated/i.test(coach.master.verdictText),
+    coach.missing ? '' : coach.master.verdictText.slice(0, 100));
+  t('"who beats it" names the Megas it could not rate',
+    !coach.missing && /cannot rate/i.test(coach.master.counters),
+    coach.missing ? '' : coach.master.counters.slice(-90));
+  t('so does the opinion answer', !coach.missing && /cannot rate/i.test(coach.master.opinion));
+  t('and the sleeper answer says how many Megas answer the same hunters',
+    !coach.missing && /Mega/.test(coach.master.sleepers) && /also answer/i.test(coach.master.sleepers),
+    coach.missing ? '' : coach.master.sleepers.slice(-90));
+  /* CONTROLS ×2 — a sentence that appears in every league says nothing, and a
+     refusal that fires in a capped league would have broken Great and Ultra to
+     buy honesty in Master. */
+  t('CONTROL: Great League gives a real verdict for the same pair, not a refusal',
+    !coach.missing && coach.great.verdict !== 'shrug',
+    coach.missing ? '' : coach.great.verdict);
+  t('CONTROL: and no Great League answer carries the cannot-rate sentence',
+    !coach.missing && !/cannot rate/i.test(coach.great.counters) &&
+    !/cannot rate/i.test(coach.great.opinion),
+    coach.missing ? '' : 'clean');
+
   console.log('\n--- the banner tells the truth ---');
   const banner = await p.evaluate(() => {
     const out = {};

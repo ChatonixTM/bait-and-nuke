@@ -72,6 +72,21 @@ function sweep(cups) {
       out[lg][id] = board.map(n => (n.tier === undefined ? '?' : n.tier) + ':' + n.c.speciesId);
       const u = board.unratedMegas || [];
       if (u.length) out[lg][id + ' (unrated)'] = u.map(n => 'u:' + n.c.speciesId);
+      /* THE SLEEPER FINDER TOO, because "everywhere Master appears" is the
+         order and this tool has to be able to see the surface being edited.
+         It is slower than the board, so it runs on the first four of the
+         sample rather than all ten - enough to catch a change in shape, and
+         stated here rather than left for someone to discover. */
+      if (SAMPLE.indexOf(id) < 4) {
+        let sl = null;
+        try { sl = findSleepers(mon) || []; }
+        catch (e) { out[lg][id + ' (sleepers)'] = 'THREW: ' + e.message; }
+        if (sl) {
+          out[lg][id + ' (sleepers)'] = sl.map(x => 's:' + x.mon.speciesId);
+          const su = sl.unratedMegas || [];
+          if (su.length) out[lg][id + ' (sleepers unrated)'] = su.map(x => 'su:' + x.mon.speciesId);
+        }
+      }
     }
   }
   return out;
@@ -82,6 +97,8 @@ const passes = { 'no cup': sweep([]), 'mega week': sweep(MEGA_WEEK) };
 const flat = (o, lg) => Object.values(o[lg]).filter(Array.isArray).flat();
 const megaCount = (o, lg) => flat(o, lg).filter(x => /_mega|_primal/.test(x) && x.indexOf('u:') !== 0).length;
 const unratedCount = (o, lg) => flat(o, lg).filter(x => x.indexOf('u:') === 0).length;
+const sleeperCount = (o, lg) => flat(o, lg).filter(x => x.indexOf('s:') === 0).length;
+const sleeperUnrated = (o, lg) => flat(o, lg).filter(x => x.indexOf('su:') === 0).length;
 const entries = (o, lg) => flat(o, lg).length;
 
 console.log('');
@@ -93,13 +110,21 @@ for (const label of Object.keys(passes)) {
   for (const lg of LEAGUES) {
     console.log('    ' + lg.padEnd(15) + String(entries(o, lg)).padStart(4) + ' entries, ' +
       String(megaCount(o, lg)).padStart(3) + ' ranked megas, ' +
-      String(unratedCount(o, lg)).padStart(3) + ' shown unrated');
+      String(unratedCount(o, lg)).padStart(3) + ' shown unrated  |  sleepers: ' +
+      String(sleeperCount(o, lg)).padStart(3) + ' rated, ' +
+      String(sleeperUnrated(o, lg)).padStart(3) + ' unrated');
   }
 }
 console.log('');
 console.log('  Great and Ultra must be IDENTICAL before and after the Master change,');
 console.log('  in BOTH cup states. Master may differ only by gaining megas.');
-const file = process.argv[2];
+/* ⚠ OBITO COULD NOT CHECK MY CLAIM, AND HE WAS RIGHT NOT TO ACCEPT IT. I said
+   Great and Ultra were "byte-identical before and after" and the comparison
+   lived in my scratch directory, where nobody else could reach it. A receipt
+   nobody can check is not a receipt. So a fingerprint is COMMITTED beside this
+   file: run with no argument and it writes tests/master-fingerprint.json, which
+   git can diff on the next change. */
+const file = process.argv[2] || require('path').join(__dirname, 'master-fingerprint.json');
 if (file) {
   fs.writeFileSync(file, JSON.stringify(passes, null, 1));
   console.log('');

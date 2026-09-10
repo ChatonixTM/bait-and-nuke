@@ -1,0 +1,920 @@
+{
+ "no cup": {
+  "Great League": {
+   "azumarill": [
+    "1:qwilfish",
+    "1:tentacruel",
+    "1:morpeko_full_belly",
+    "2:toxapex",
+    "2:lanturn",
+    "2:jellicent",
+    "3:magneton",
+    "3:vikavolt",
+    "3:amoonguss"
+   ],
+   "azumarill (sleepers)": [
+    "s:togedemaru",
+    "s:kartana",
+    "s:sandslash",
+    "s:meowscarada",
+    "s:incineroar"
+   ],
+   "skarmory": [
+    "1:stunfisk",
+    "1:morpeko_full_belly",
+    "1:togedemaru",
+    "2:pachirisu",
+    "2:lanturn",
+    "2:registeel",
+    "3:zoroark",
+    "3:alakazam",
+    "3:monferno"
+   ],
+   "skarmory (sleepers)": [
+    "s:sandslash",
+    "s:kartana",
+    "s:sceptile",
+    "s:trevenant",
+    "s:whimsicott"
+   ],
+   "dragonite": [
+    "1:clefable",
+    "1:ninetales_alolan",
+    "1:florges",
+    "2:azumarill",
+    "2:mimikyu",
+    "2:shiinotic",
+    "3:altaria",
+    "3:kommo_o",
+    "3:dunsparce"
+   ],
+   "dragonite (sleepers)": [
+    "s:ferrothorn",
+    "s:nidorina",
+    "s:ariados",
+    "s:lairon",
+    "s:slowking_galarian"
+   ],
+   "machamp": [
+    "1:medicham",
+    "1:weezing_galarian",
+    "1:clefable",
+    "2:mimikyu",
+    "2:ledian",
+    "2:lugia",
+    "3:deoxys_attack",
+    "3:chansey",
+    "3:absol"
+   ],
+   "machamp (sleepers)": [
+    "s:lairon",
+    "s:ferrothorn",
+    "s:perrserker",
+    "s:togedemaru",
+    "s:gigalith"
+   ],
+   "gengar": [
+    "1:zoroark_hisuian",
+    "1:quagsire",
+    "1:clodsire",
+    "2:mandibuzz",
+    "2:moltres_galarian",
+    "2:oranguru",
+    "3:jellicent",
+    "3:corsola_galarian",
+    "3:mimikyu"
+   ],
+   "mewtwo": [
+    "1:sableye",
+    "1:doublade",
+    "1:grumpig",
+    "2:spiritomb",
+    "2:aegislash_shield",
+    "2:orbeetle",
+    "3:dunsparce",
+    "3:samurott_hisuian",
+    "3:amoonguss"
+   ],
+   "giratina_altered": [
+    "1:morgrem",
+    "1:kingambit",
+    "1:grimmsnarl",
+    "2:wigglytuff",
+    "2:umbreon",
+    "2:mandibuzz",
+    "3:conkeldurr",
+    "3:jellicent",
+    "3:absol"
+   ],
+   "swampert": [
+    "1:jumpluff",
+    "1:dartrix",
+    "1:gourgeist_super",
+    "2:ludicolo",
+    "2:tropius",
+    "2:shiinotic"
+   ],
+   "tinkaton": [
+    "1:corviknight",
+    "1:fletchinder",
+    "1:charizard",
+    "2:talonflame",
+    "2:moltres",
+    "2:gastrodon",
+    "3:marowak_alolan",
+    "3:skeledirge",
+    "3:victini"
+   ],
+   "lanturn": [
+    "1:gourgeist_super",
+    "1:gogoat",
+    "1:serperior",
+    "2:amoonguss",
+    "2:dipplin",
+    "2:hydrapple",
+    "3:marowak",
+    "3:runerigus",
+    "3:palossand"
+   ]
+  },
+  "Ultra League": {
+   "azumarill": [
+    "1:tentacruel",
+    "1:qwilfish",
+    "1:bellibolt",
+    "2:lanturn",
+    "2:jellicent",
+    "2:ludicolo",
+    "3:golem_alolan",
+    "3:tapu_bulu",
+    "3:cacturne"
+   ],
+   "azumarill (sleepers)": [
+    "s:quagsire",
+    "s:whiscash",
+    "s:nidoking",
+    "s:swalot",
+    "s:chesnaught"
+   ],
+   "skarmory": [
+    "1:stunfisk",
+    "1:bellibolt",
+    "1:raikou",
+    "2:magnezone",
+    "2:registeel",
+    "2:ampharos",
+    "3:alakazam",
+    "3:luxio",
+    "3:flaaffy"
+   ],
+   "skarmory (sleepers)": [
+    "s:landorus_therian",
+    "s:quagsire",
+    "s:whiscash",
+    "s:nidoking",
+    "s:swalot"
+   ],
+   "dragonite": [
+    "1:clefable",
+    "1:florges",
+    "1:weezing_galarian",
+    "2:mimikyu",
+    "2:tapu_fini",
+    "2:gardevoir",
+    "3:zygarde_complete",
+    "3:kommo_o",
+    "3:dialga_origin"
+   ],
+   "dragonite (sleepers)": [
+    "s:slowking_galarian",
+    "s:muk",
+    "s:scolipede",
+    "s:glalie",
+    "s:zoroark_hisuian"
+   ],
+   "machamp": [
+    "1:weezing_galarian",
+    "1:togekiss",
+    "1:clefable",
+    "2:lugia",
+    "2:mimikyu",
+    "2:cresselia",
+    "3:deoxys_attack",
+    "3:slowpoke",
+    "3:spoink"
+   ],
+   "machamp (sleepers)": [
+    "s:togedemaru",
+    "s:qwilfish_hisuian",
+    "s:meowscarada",
+    "s:shiftry",
+    "s:kartana"
+   ],
+   "gengar": [
+    "1:zoroark_hisuian",
+    "1:swampert",
+    "1:hippowdon",
+    "2:moltres_galarian",
+    "2:mandibuzz",
+    "2:oranguru",
+    "3:jellicent",
+    "3:runerigus",
+    "3:mimikyu"
+   ],
+   "mewtwo": [
+    "1:doublade",
+    "1:grumpig",
+    "1:rapidash_galarian",
+    "2:spiritomb",
+    "2:gholdengo",
+    "2:orbeetle",
+    "3:samurott_hisuian",
+    "3:amoonguss",
+    "3:conkeldurr"
+   ],
+   "giratina_altered": [
+    "1:grimmsnarl",
+    "1:kingambit",
+    "1:tinkaton",
+    "2:moltres_galarian",
+    "2:wigglytuff",
+    "2:mandibuzz",
+    "3:conkeldurr",
+    "3:jellicent",
+    "3:zygarde_complete"
+   ],
+   "swampert": [
+    "1:virizion",
+    "1:gourgeist_super",
+    "1:trevenant",
+    "2:ludicolo",
+    "2:dipplin",
+    "2:celebi",
+    "3:dolliv",
+    "3:weepinbell",
+    "3:lileep"
+   ],
+   "tinkaton": [
+    "1:corviknight",
+    "1:charizard",
+    "1:swampert",
+    "2:talonflame",
+    "2:ho_oh",
+    "2:runerigus",
+    "3:skeledirge",
+    "3:zygarde_complete",
+    "3:victini"
+   ],
+   "lanturn": [
+    "1:virizion",
+    "1:gourgeist_super",
+    "1:trevenant",
+    "2:dipplin",
+    "2:amoonguss",
+    "2:appletun",
+    "3:runerigus",
+    "3:palossand",
+    "3:grovyle"
+   ]
+  },
+  "Master League": {
+   "azumarill": [
+    "1:melmetal",
+    "1:kartana",
+    "1:raikou",
+    "2:kyurem_black",
+    "2:solgaleo",
+    "2:dialga",
+    "3:nihilego",
+    "3:regirock",
+    "3:typhlosion_hisuian"
+   ],
+   "azumarill (sleepers)": [
+    "s:zamazenta_hero",
+    "s:hippowdon",
+    "s:swampert",
+    "s:zacian_hero",
+    "s:cobalion"
+   ],
+   "skarmory": [
+    "1:zekrom",
+    "1:melmetal",
+    "1:raikou",
+    "2:solgaleo",
+    "2:heatran",
+    "2:zeraora",
+    "3:kyurem_black",
+    "3:luxio",
+    "3:flaaffy"
+   ],
+   "skarmory (sleepers)": [
+    "s:hippowdon",
+    "s:swampert",
+    "s:mamoswine",
+    "s:zamazenta_hero",
+    "s:zacian_hero"
+   ],
+   "dragonite": [
+    "1:florges",
+    "1:togekiss",
+    "1:sylveon",
+    "2:xerneas",
+    "2:tapu_bulu",
+    "2:kyurem_black",
+    "3:dialga_origin",
+    "3:eternatus",
+    "3:zygarde_complete"
+   ],
+   "dragonite (sleepers)": [
+    "s:eternatus_eternamax",
+    "s:mamoswine",
+    "s:kartana",
+    "s:genesect_chill",
+    "s:avalugg_hisuian"
+   ],
+   "machamp": [
+    "1:necrozma_dawn_wings",
+    "1:latios",
+    "1:togekiss",
+    "2:lugia",
+    "2:lunala",
+    "2:xerneas",
+    "3:togetic",
+    "3:beautifly",
+    "3:ninjask"
+   ],
+   "machamp (sleepers)": [
+    "s:genesect_chill",
+    "s:zapdos",
+    "s:hippowdon",
+    "s:zacian_hero",
+    "s:mamoswine"
+   ],
+   "gengar": [
+    "1:landorus_therian",
+    "1:hippowdon",
+    "1:sylveon",
+    "2:meloetta_aria",
+    "2:zygarde_complete",
+    "2:groudon",
+    "3:solgaleo",
+    "3:jirachi",
+    "3:gholdengo"
+   ],
+   "mewtwo": [
+    "1:necrozma_dawn_wings",
+    "1:metagross",
+    "1:genesect_chill",
+    "2:lunala",
+    "2:gholdengo",
+    "2:lugia",
+    "3:feraligatr",
+    "3:spiritomb",
+    "3:dhelmise"
+   ],
+   "giratina_altered": [
+    "1:florges",
+    "1:tyranitar",
+    "1:togekiss",
+    "2:dialga_origin",
+    "2:xerneas",
+    "2:kingambit",
+    "3:kyurem_black",
+    "3:eternatus",
+    "3:lugia"
+   ],
+   "swampert": [
+    "1:virizion",
+    "1:florges",
+    "1:kartana",
+    "2:tapu_bulu",
+    "2:celebi",
+    "2:zarude",
+    "3:parasect",
+    "3:dartrix",
+    "3:jumpluff"
+   ],
+   "tinkaton": [
+    "1:landorus_therian",
+    "1:reshiram",
+    "1:hippowdon",
+    "2:ho_oh",
+    "2:groudon",
+    "2:moltres",
+    "3:zygarde_complete",
+    "3:garchomp",
+    "3:solgaleo"
+   ],
+   "lanturn": [
+    "1:kartana",
+    "1:virizion",
+    "1:florges",
+    "2:kyurem_white",
+    "2:dialga_origin",
+    "2:tapu_bulu",
+    "3:groudon",
+    "3:ursaluna",
+    "3:grovyle"
+   ]
+  }
+ },
+ "mega week": {
+  "Great League": {
+   "azumarill": [
+    "1:qwilfish",
+    "1:tentacruel",
+    "1:morpeko_full_belly",
+    "2:toxapex",
+    "2:lanturn",
+    "2:jellicent",
+    "3:magneton",
+    "3:vikavolt",
+    "3:amoonguss"
+   ],
+   "azumarill (sleepers)": [
+    "s:togedemaru",
+    "s:kartana",
+    "s:steelix_mega",
+    "s:meowscarada",
+    "s:incineroar"
+   ],
+   "skarmory": [
+    "1:stunfisk",
+    "1:morpeko_full_belly",
+    "1:togedemaru",
+    "2:pachirisu",
+    "2:lanturn",
+    "2:registeel",
+    "3:zoroark",
+    "3:alakazam",
+    "3:monferno"
+   ],
+   "skarmory (sleepers)": [
+    "s:steelix_mega",
+    "s:kartana",
+    "s:sceptile",
+    "s:trevenant",
+    "s:whimsicott"
+   ],
+   "dragonite": [
+    "1:clefable",
+    "1:ninetales_alolan",
+    "1:florges",
+    "2:azumarill",
+    "2:mimikyu",
+    "2:shiinotic",
+    "3:altaria",
+    "3:kommo_o",
+    "3:dunsparce"
+   ],
+   "dragonite (sleepers)": [
+    "s:ferrothorn",
+    "s:nidorina",
+    "s:ariados",
+    "s:lairon",
+    "s:slowking_galarian"
+   ],
+   "machamp": [
+    "1:medicham",
+    "1:weezing_galarian",
+    "1:clefable",
+    "2:mimikyu",
+    "2:ledian",
+    "2:lugia",
+    "3:deoxys_attack",
+    "3:chansey",
+    "3:absol"
+   ],
+   "machamp (sleepers)": [
+    "s:lairon",
+    "s:ferrothorn",
+    "s:perrserker",
+    "s:togedemaru",
+    "s:sableye_mega"
+   ],
+   "gengar": [
+    "1:zoroark_hisuian",
+    "1:quagsire",
+    "1:clodsire",
+    "2:mandibuzz",
+    "2:moltres_galarian",
+    "2:audino_mega",
+    "3:jellicent",
+    "3:corsola_galarian",
+    "3:mimikyu"
+   ],
+   "mewtwo": [
+    "1:sableye",
+    "1:sableye_mega",
+    "1:doublade",
+    "2:spiritomb",
+    "2:aegislash_shield",
+    "2:orbeetle",
+    "3:dunsparce",
+    "3:samurott_hisuian",
+    "3:amoonguss"
+   ],
+   "giratina_altered": [
+    "1:morgrem",
+    "1:kingambit",
+    "1:grimmsnarl",
+    "2:wigglytuff",
+    "2:audino_mega",
+    "2:umbreon",
+    "3:conkeldurr",
+    "3:jellicent",
+    "3:absol"
+   ],
+   "swampert": [
+    "1:jumpluff",
+    "1:dartrix",
+    "1:gourgeist_super",
+    "2:ludicolo",
+    "2:tropius",
+    "2:shiinotic"
+   ],
+   "tinkaton": [
+    "1:corviknight",
+    "1:fletchinder",
+    "1:charizard",
+    "2:talonflame",
+    "2:moltres",
+    "2:gastrodon",
+    "3:marowak_alolan",
+    "3:skeledirge",
+    "3:victini"
+   ],
+   "lanturn": [
+    "1:gourgeist_super",
+    "1:gogoat",
+    "1:serperior",
+    "2:amoonguss",
+    "2:dipplin",
+    "2:hydrapple",
+    "3:marowak",
+    "3:runerigus",
+    "3:palossand"
+   ]
+  },
+  "Ultra League": {
+   "azumarill": [
+    "1:tentacruel",
+    "1:qwilfish",
+    "1:bellibolt",
+    "2:lanturn",
+    "2:jellicent",
+    "2:ludicolo",
+    "3:golem_alolan",
+    "3:tapu_bulu",
+    "3:victreebel_mega"
+   ],
+   "azumarill (sleepers)": [
+    "s:malamar_mega",
+    "s:steelix_mega",
+    "s:chesnaught_mega",
+    "s:venusaur_mega",
+    "s:quagsire"
+   ],
+   "skarmory": [
+    "1:stunfisk",
+    "1:bellibolt",
+    "1:raikou",
+    "2:magnezone",
+    "2:registeel",
+    "2:ampharos",
+    "3:alakazam",
+    "3:luxio",
+    "3:flaaffy"
+   ],
+   "skarmory (sleepers)": [
+    "s:landorus_therian",
+    "s:steelix_mega",
+    "s:quagsire",
+    "s:swampert_mega",
+    "s:whiscash"
+   ],
+   "dragonite": [
+    "1:clefable",
+    "1:florges",
+    "1:weezing_galarian",
+    "2:mimikyu",
+    "2:tapu_fini",
+    "2:gardevoir",
+    "3:zygarde_complete",
+    "3:kommo_o",
+    "3:dialga_origin"
+   ],
+   "dragonite (sleepers)": [
+    "s:scizor_mega",
+    "s:metagross_mega",
+    "s:venusaur_mega",
+    "s:slowking_galarian",
+    "s:steelix_mega"
+   ],
+   "machamp": [
+    "1:weezing_galarian",
+    "1:togekiss",
+    "1:clefable",
+    "2:lugia",
+    "2:mimikyu",
+    "2:cresselia",
+    "3:deoxys_attack",
+    "3:slowpoke",
+    "3:spoink"
+   ],
+   "machamp (sleepers)": [
+    "s:scizor_mega",
+    "s:metagross_mega",
+    "s:togedemaru",
+    "s:qwilfish_hisuian",
+    "s:meowscarada"
+   ],
+   "gengar": [
+    "1:zoroark_hisuian",
+    "1:swampert",
+    "1:hippowdon",
+    "2:moltres_galarian",
+    "2:mandibuzz",
+    "2:oranguru",
+    "3:jellicent",
+    "3:runerigus",
+    "3:mimikyu"
+   ],
+   "mewtwo": [
+    "1:doublade",
+    "1:grumpig",
+    "1:sableye_mega",
+    "2:spiritomb",
+    "2:gholdengo",
+    "2:orbeetle",
+    "3:samurott_hisuian",
+    "3:amoonguss",
+    "3:conkeldurr"
+   ],
+   "giratina_altered": [
+    "1:grimmsnarl",
+    "1:kingambit",
+    "1:tinkaton",
+    "2:audino_mega",
+    "2:moltres_galarian",
+    "2:wigglytuff",
+    "3:conkeldurr",
+    "3:jellicent",
+    "3:zygarde_complete"
+   ],
+   "swampert": [
+    "1:virizion",
+    "1:gourgeist_super",
+    "1:trevenant",
+    "2:ludicolo",
+    "2:dipplin",
+    "2:celebi",
+    "3:dolliv",
+    "3:weepinbell",
+    "3:lileep"
+   ],
+   "tinkaton": [
+    "1:corviknight",
+    "1:charizard",
+    "1:swampert",
+    "2:talonflame",
+    "2:ho_oh",
+    "2:runerigus",
+    "3:skeledirge",
+    "3:zygarde_complete",
+    "3:victini"
+   ],
+   "lanturn": [
+    "1:virizion",
+    "1:gourgeist_super",
+    "1:trevenant",
+    "2:dipplin",
+    "2:amoonguss",
+    "2:appletun",
+    "3:runerigus",
+    "3:gallade_mega",
+    "3:palossand"
+   ]
+  },
+  "Master League": {
+   "azumarill": [
+    "1:melmetal",
+    "1:kartana",
+    "1:raikou",
+    "2:kyurem_black",
+    "2:solgaleo",
+    "2:dialga",
+    "3:nihilego",
+    "3:regirock",
+    "3:typhlosion_hisuian"
+   ],
+   "azumarill (unrated)": [
+    "u:sharpedo_mega",
+    "u:beedrill_mega",
+    "u:raichu_mega_x",
+    "u:starmie_mega",
+    "u:raichu_mega_y",
+    "u:manectric_mega"
+   ],
+   "azumarill (sleepers)": [
+    "s:zamazenta_hero",
+    "s:hippowdon",
+    "s:swampert",
+    "s:zacian_hero",
+    "s:cobalion"
+   ],
+   "skarmory": [
+    "1:zekrom",
+    "1:melmetal",
+    "1:raikou",
+    "2:solgaleo",
+    "2:heatran",
+    "2:zeraora",
+    "3:kyurem_black",
+    "3:luxio",
+    "3:flaaffy"
+   ],
+   "skarmory (unrated)": [
+    "u:raichu_mega_x",
+    "u:raichu_mega_y",
+    "u:manectric_mega",
+    "u:ampharos_mega",
+    "u:charizard_mega_y",
+    "u:charizard_mega_x"
+   ],
+   "skarmory (sleepers)": [
+    "s:hippowdon",
+    "s:swampert",
+    "s:mamoswine",
+    "s:zamazenta_hero",
+    "s:zacian_hero"
+   ],
+   "dragonite": [
+    "1:florges",
+    "1:togekiss",
+    "1:sylveon",
+    "2:xerneas",
+    "2:tapu_bulu",
+    "2:kyurem_black",
+    "3:dialga_origin",
+    "3:eternatus",
+    "3:zygarde_complete"
+   ],
+   "dragonite (unrated)": [
+    "u:gardevoir_mega",
+    "u:altaria_mega",
+    "u:mawile_mega",
+    "u:abomasnow_mega",
+    "u:glalie_mega",
+    "u:diancie_mega"
+   ],
+   "dragonite (sleepers)": [
+    "s:eternatus_eternamax",
+    "s:mamoswine",
+    "s:kartana",
+    "s:genesect_chill",
+    "s:avalugg_hisuian"
+   ],
+   "machamp": [
+    "1:necrozma_dawn_wings",
+    "1:latios",
+    "1:togekiss",
+    "2:lugia",
+    "2:lunala",
+    "2:xerneas",
+    "3:togetic",
+    "3:beautifly",
+    "3:ninjask"
+   ],
+   "machamp (unrated)": [
+    "u:gardevoir_mega",
+    "u:banette_mega",
+    "u:charizard_mega_y",
+    "u:medicham_mega",
+    "u:gallade_mega",
+    "u:starmie_mega"
+   ],
+   "machamp (sleepers)": [
+    "s:genesect_chill",
+    "s:zapdos",
+    "s:hippowdon",
+    "s:zacian_hero",
+    "s:mamoswine"
+   ],
+   "gengar": [
+    "1:landorus_therian",
+    "1:hippowdon",
+    "1:sylveon",
+    "2:meloetta_aria",
+    "2:zygarde_complete",
+    "2:groudon",
+    "3:solgaleo",
+    "3:jirachi",
+    "3:gholdengo"
+   ],
+   "gengar (unrated)": [
+    "u:swampert_mega",
+    "u:malamar_mega",
+    "u:sableye_mega",
+    "u:groudon_primal",
+    "u:garchomp_mega",
+    "u:camerupt_mega"
+   ],
+   "mewtwo": [
+    "1:necrozma_dawn_wings",
+    "1:metagross",
+    "1:genesect_chill",
+    "2:lunala",
+    "2:gholdengo",
+    "2:lugia",
+    "3:feraligatr",
+    "3:spiritomb",
+    "3:dhelmise"
+   ],
+   "mewtwo (unrated)": [
+    "u:sableye_mega",
+    "u:scizor_mega",
+    "u:starmie_mega",
+    "u:pinsir_mega",
+    "u:latias_mega",
+    "u:latios_mega"
+   ],
+   "giratina_altered": [
+    "1:florges",
+    "1:tyranitar",
+    "1:togekiss",
+    "2:dialga_origin",
+    "2:xerneas",
+    "2:kingambit",
+    "3:kyurem_black",
+    "3:eternatus",
+    "3:lugia"
+   ],
+   "giratina_altered (unrated)": [
+    "u:audino_mega",
+    "u:mawile_mega",
+    "u:absol_mega",
+    "u:tyranitar_mega",
+    "u:greninja_mega",
+    "u:sableye_mega"
+   ],
+   "swampert": [
+    "1:virizion",
+    "1:florges",
+    "1:kartana",
+    "2:tapu_bulu",
+    "2:celebi",
+    "2:zarude",
+    "3:parasect",
+    "3:dartrix",
+    "3:jumpluff"
+   ],
+   "swampert (unrated)": [
+    "u:sceptile_mega",
+    "u:chesnaught_mega",
+    "u:venusaur_mega",
+    "u:victreebel_mega",
+    "u:gallade_mega",
+    "u:dragonite_mega"
+   ],
+   "tinkaton": [
+    "1:landorus_therian",
+    "1:reshiram",
+    "1:hippowdon",
+    "2:ho_oh",
+    "2:groudon",
+    "2:moltres",
+    "3:zygarde_complete",
+    "3:garchomp",
+    "3:solgaleo"
+   ],
+   "tinkaton (unrated)": [
+    "u:charizard_mega_y",
+    "u:swampert_mega",
+    "u:skarmory_mega",
+    "u:alakazam_mega",
+    "u:kangaskhan_mega",
+    "u:charizard_mega_x"
+   ],
+   "lanturn": [
+    "1:kartana",
+    "1:virizion",
+    "1:florges",
+    "2:kyurem_white",
+    "2:dialga_origin",
+    "2:tapu_bulu",
+    "3:groudon",
+    "3:ursaluna",
+    "3:grovyle"
+   ],
+   "lanturn (unrated)": [
+    "u:sceptile_mega",
+    "u:venusaur_mega",
+    "u:victreebel_mega",
+    "u:chesnaught_mega",
+    "u:swampert_mega",
+    "u:latias_mega"
+   ]
+  }
+ }
+}

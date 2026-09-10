@@ -26,6 +26,7 @@
 //
 // Run: node tests/mastertest.js
 require(require('path').join(__dirname, 'harness.js'));
+const fs = require('fs');
 
 let pass = 0, fail = 0;
 const t = (n, c, x) => { c ? pass++ : fail++; console.log((c ? '✅' : '❌ FAIL'), n, x ? '— ' + x : ''); };
@@ -145,6 +146,85 @@ console.log('\n--- the order is the matchup, not a score ---');
     b.unrated.length ? b.unrated[0].c.speciesId + ' ' + b.unrated[0].typeRatio.toFixed(2) + '×' : 'empty');
 }
 
+console.log('\n--- the squad score reports them beside it, never inside it ---');
+{
+  /* ⭐⭐ THIS ONE WAS A SHIPPED BUG, NOT A GAP. scoreSquadReal did
+     `findNightmares(...).filter(...)`, and `.filter` returns a NEW plain array
+     that does not carry the unrated group across. So every Master mega
+     threatening the squad was invisible to Shared Nightmares, the largest
+     bucket in the score, and to the swept alert, and to the two Sprocket
+     answers built on it. Itachi found it by reading. Semiu had named this exact
+     shape as a FUTURE risk the day before; it was already live when she said it.
+     The squad is seated the way the app seats one, through buildLoadoutEntry. */
+  const seat = id => {
+    const m = POKEMON.find(p => p.speciesId === id);
+    if (!m) return null;
+    const fl = m.fastMoves.map(i => MOVES[i]).filter(Boolean);
+    const cl = m.chargedMoves.map(i => MOVES[i]).filter(Boolean);
+    const d = pickDefaultLoadout(m, fl, cl);
+    return buildLoadoutEntry(m, d.fast, d.bait, d.nuke, null);
+  };
+  const run = (lg) => {
+    global.CUPS = MEGA_WEEK; global.selectedCupIndex = 0; global.__LEAGUE = lg;
+    global.squad = ['mewtwo', 'dragonite', 'giratina_altered'].map(seat).filter(Boolean);
+    try { return scoreSquadReal(); } catch (e) { return { threw: e.message }; }
+  };
+  const ml = run('Master League'), gl = run('Great League');
+  const line = r => ((r && r.risks) || []).filter(x => /not counted in the score/.test(x));
+  t('the squad score NAMES the unrated megas that threaten it',
+    !ml.threw && line(ml).length === 1,
+    ml.threw ? 'THREW: ' + ml.threw : line(ml).length + ' line(s)');
+  t('and says plainly they are NOT counted in the score',
+    !ml.threw && /not counted in the score/.test(line(ml)[0] || ''),
+    (line(ml)[0] || '').replace(/<[^>]+>/g, '').slice(0, 90));
+  /* CONTROL × 2 — a line that appears everywhere says nothing, and a score that
+     moved would mean the megas had been folded in after all. */
+  t('CONTROL: Great League gets no such line — there a mega is counted normally',
+    !gl.threw && line(gl).length === 0,
+    gl.threw ? 'THREW: ' + gl.threw : line(gl).length + ' line(s)');
+  /* ⚠⚠ THIS COMPARED MASTER TO GREAT LEAGUE and called equality proof that
+     nothing was folded into the score. Ino ran eight squads on correct code:
+     FIVE score legitimately differently across leagues, because movesets and
+     boards genuinely differ by cap. The trio this bench uses is one of the
+     three that happen to coincide. Swap in another and the control fails on
+     correct code. A control that happens to be right is not a control.
+     Obito built the one it should have been - SAME league, cup toggled, so
+     the only difference is whether megas are present at all. */
+  const megaOn = run('Master League');
+  global.CUPS = []; global.selectedCupIndex = 0;
+  global.__LEAGUE = 'Master League';
+  global.squad = ['mewtwo', 'dragonite', 'giratina_altered'].map(seat).filter(Boolean);
+  let megaOff; try { megaOff = scoreSquadReal(); } catch (e) { megaOff = { threw: e.message }; }
+  t('CONTROL: the score is IDENTICAL with the megas present and absent, same league — nothing was folded in',
+    !megaOn.threw && !megaOff.threw && megaOn.synergy_score === megaOff.synergy_score,
+    megaOn.threw || megaOff.threw ? 'threw' : megaOn.synergy_score + ' with, ' + megaOff.synergy_score + ' without');
+  t('CONTROL: and the ONLY difference is the extra risk line',
+    !megaOn.threw && !megaOff.threw &&
+    (megaOn.risks || []).length === (megaOff.risks || []).length + 1,
+    ((megaOn.risks||[]).length) + ' risks with, ' + ((megaOff.risks||[]).length) + ' without');
+}
+
+/* ⚠⚠ TWO SECTIONS WERE REMOVED FROM HERE ON Sept 10 2026, AND THAT IS NOT A
+   REDUCTION IN COVERAGE - IT IS THE REMOVAL OF COVERAGE THAT WAS NEVER THERE.
+
+   One tested the head-to-head verdict through `decide()`, a REIMPLEMENTATION
+   of the branch logic, because voiceMatchup is nested and node cannot reach
+   it. Semiu neutered the real branch with `if(false && ...)`, leaving every
+   literal string intact, and all four assertions stayed green while the
+   shipped app went back to printing "Even fight; play it clean". A bench that
+   checks its own copy of the logic checks nothing.
+
+   The other cut each coach function out of app.js by text and grepped the
+   slice. Ino broke it three ways: the cut's `slice(i, -1)` returns nearly the
+   whole FILE when its end marker is missing, which is already latent on the
+   real source today; she made it read 21,575 chars instead of 2,274 and
+   swallow another function's intact call, reporting 36/36 green over a real
+   regression; and two checks were satisfied by a bare identifier over dead
+   code.
+
+   All of those claims are now DRIVEN in tests/megatest.js, in a browser,
+   against the real functions through the door opened in app.js. Eight checks
+   with two controls. They are not gone; they moved to where they can see. */
 console.log('\n--- and the page does not call it a rank ---');
 {
   const b = board('Master League', 'mewtwo', MEGA_WEEK);

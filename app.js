@@ -4433,12 +4433,24 @@ function scoreSquadReal(){
   // The honest window is the top N threats BY THREAT SCORE: the ones that would
   // actually show up against you, not every legal counter in the game.
   const T1_WINDOW = 12;
+  /* ⚠⚠ THE UNRATED GROUP IS READ OFF THE ORIGINAL RETURN, BEFORE .filter.
+     `.filter` builds a NEW plain array and does not carry properties across,
+     and the unrated megas ride on the returned array as a property. So this
+     line used to drop every Master mega threatening the squad, silently, and
+     Shared Nightmares - the largest bucket in the score - could not see one.
+     Itachi found it. Semiu had named this exact shape as a future risk the day
+     before; it was already live by then. */
+  const unratedThreats = new Map();
   const t1sets = members.map(m=>{
     let list = [];
     try{
-      list = findNightmares(m.mon, 60)
-               .filter(n=>n.tier===1)
-               .slice(0, T1_WINDOW);   // already sorted by threat desc
+      const full = findNightmares(m.mon, 60);
+      for(const u of (full.unratedMegas || [])){
+        const e = unratedThreats.get(u.c.speciesName) || { n: 0 };
+        e.n++; unratedThreats.set(u.c.speciesName, e);
+      }
+      list = full.filter(n=>n.tier===1)
+                 .slice(0, T1_WINDOW);   // already sorted by threat desc
     }catch(e){}
     return new Set(list.map(n=>n.c.speciesName));
   });
@@ -4459,6 +4471,22 @@ function scoreSquadReal(){
   } else {
     score += 30;
     strengths.push('No single Pokémon hard-counters more than one member — nothing sweeps you.');
+  }
+
+  /* ⭐ THE UNRATED MEGAS, SAID BESIDE THE SCORE AND NEVER INSIDE IT. Master has
+     no rating for a Mega, so there is no honest weight to add to a number -
+     the board refuses to give them a tier for exactly that reason, and folding
+     them in here would invent the weight it refused. So this is a risk line
+     the reader can act on, and the score is untouched. It also means the
+     sentence above ("nothing sweeps you") is no longer allowed to stand alone
+     while an unrated Mega threatens two of three. */
+  if(unratedThreats.size){
+    const many = [...unratedThreats.entries()].filter(([,e]) => e.n >= 2)
+                   .sort((x,y) => y[1].n - x[1].n);
+    const top = (many.length ? many : [...unratedThreats.entries()]).slice(0,3).map(([n]) => n);
+    risks.push(`⭕ <b>${top.join(', ')}</b> also threaten${top.length===1?'s':''} this squad, and ` +
+      `${many.length ? `${many.length} of them hit two or more members` : 'they are Megas'} — but Master has no ` +
+      `rating for a Mega, so <b>they are not counted in the score above</b>. Check their board directly.`);
   }
 
   // ---- 2. SHIELD PRESSURE (0-22)
@@ -5844,6 +5872,20 @@ function findSleepers(X, opts){
   /* ---------- voice ------------------------------------------------------- */
   const TIER_WORD = {1:'hard counter', 2:'grinder', 3:'coincidental check'};
 
+  /* ⭐ ONE SENTENCE, THREE CALLERS. Every Sprocket answer built on a board can
+     be false by omission in Master: the tiered list is real and complete for
+     what it rates, and says nothing about the Megas beside it. This states the
+     gap and points at the group. It never ranks them, never counts them into a
+     verdict, and returns EMPTY when there is nothing to say - so it cannot
+     become a disclaimer that is always there and therefore read by nobody. */
+  function unratedNote(board){
+    const u = (board && board.unratedMegas) || [];
+    if(!u.length) return '';
+    const names = u.slice(0,2).map(n => `<b>${esc(n.c.speciesName)}</b>`).join(' and ');
+    return ` ⚠ There ${u.length===1?'is':'are'} also ${u.length} <b>Mega</b>${u.length===1?'':'s'} on this board ` +
+      `that I cannot rate — Master has no CP cap and nobody ranks Megas for it. ${names} among them. ` +
+      `They are shown unrated at the bottom of the board; I am not going to pretend they are not there.`;
+  }
   function voiceCounters(mon){
     const board = findNightmares(mon, 9);
     if(!board.length)
@@ -5872,8 +5914,14 @@ function findSleepers(X, opts){
     }
     // confidence from the real board: a Tier-1 hard counter (or a clearly clean
     // board) is a decisive read; a grind-only board hinges on shields = leaning.
+    /* ⚠ "Nothing hard-counters X" is a CLAIM, and in Master it was being made
+       over a board that had quietly set the Megas aside. */
+    out += unratedNote(board);
     const conf = t1.length ? 'high' : (board.some(k=>k.tier===2) ? 'leaning' : 'high');
-    return {state:'answer', html:out, conf};
+    /* and a claim of no hard counters cannot be a HIGH read while something on
+       the same board is unrated - the confidence has to know what it did not see */
+    const conf2 = (!t1.length && ((board.unratedMegas||[]).length)) ? 'leaning' : conf;
+    return {state:'answer', html:out, conf:conf2};
   }
 
   function voiceSquad(){
@@ -5925,6 +5973,31 @@ function findSleepers(X, opts){
         `engine keeps those off every board because they can't be brought to GO Battle League. ` +
         `That's <b>no reading</b>, not an even fight. I'd rather say nothing than invent a winner.`};
     }
+    /* ⭐⭐ UNRATED IS A THIRD STATE, AND LEAVING IT OUT REOPENED THE BUG THIS
+       FUNCTION ALREADY FIXED ONCE. Since Sept 9 a mega in an uncapped league
+       is neither blind nor ranked: the cup allows it, so offTheBoards returns
+       false, but it sits in the unrated group rather than on the board. So the
+       board lookup comes back empty for a reason that has nothing to do with
+       the matchup, every verdict branch misses, and the final else printed
+       "Neither hard-counters the other ... Even fight; play it clean" — a
+       confident verdict built on a lookup that could not succeed, which is
+       word for word the defect the comment below says was removed.
+       MEASURED: Sableye Mega vs Mewtwo in Master took that branch. The same
+       pair in Great League returns a real Tier 1 verdict, because there a mega
+       is ranked like anything else. */
+    const inUnrated = (board, id) => ((board && board.unratedMegas) || []).some(n => n.c.speciesId === id);
+    const aUnrated = inUnrated(bBoard, a.speciesId), bUnrated = inUnrated(aBoard, b.speciesId);
+    if((aUnrated || bUnrated) && !aOnB && !bOnA){
+      const who = aUnrated && bUnrated ? `<b>${A}</b> and <b>${B}</b> are both`
+                : aUnrated ? `<b>${A}</b> is` : `<b>${B}</b> is`;
+      return {state:'shrug', conf:'low', html:
+        `I can't rule on this one. ${who} Mega, and this week Megas are legal here — but ` +
+        `Master League has no CP cap and nobody publishes Mega rankings for it, so this engine ` +
+        `shows them <b>unrated</b> rather than placing them against ranked picks. They appear on ` +
+        `the board in their own group, and I am not going to turn that into a winner. That's ` +
+        `<b>no reading</b>, not an even fight.`};
+    }
+
     const blindName = aBlind ? A : bBlind ? B : null;
     const unseen = aBlind ? `whether ${A} beats ${B}` : bBlind ? `whether ${B} beats ${A}` : null;
     if(aOnB && (!bOnA || aOnB.tier < bOnA.tier)){
@@ -5949,6 +6022,25 @@ function findSleepers(X, opts){
         `That's half the picture, and I'm not going to pretend it's the whole one.`};
     } else {
       out = `Neither hard-counters the other — the engine doesn't put either on the other's nightmare board. It'll come down to <b>shields, energy, and who baits better</b>. Even fight; play it clean.`;
+    }
+    /* ⭐⭐ THE HALF THAT WAS NEVER CHECKED IS NOW SAID OUT LOUD. If one side
+       could not appear on the other's board at all - blind because the cup bans
+       it, or unrated because Master has no rating for a Mega - then a one-sided
+       verdict here is real but PARTIAL, and printing it bare invites the reader
+       to take it as a checked, two-way reading.
+       The verdict is kept, because it is genuinely read off a board and this
+       function already argues that blanket-refusing both directions is failing
+       safe in the wrong direction. Only the silence is removed.
+       MEASURED: 2 of 56 sampled mega-versus-normal pairs on Master took this
+       path and printed a bare one-sided verdict. */
+    const oneSided = (aOnB && !bOnA) || (bOnA && !aOnB);
+    if(oneSided){
+      const hidden = !aOnB ? A : B;
+      const why = (!aOnB && (aBlind || aUnrated)) || (!bOnA && (bBlind || bUnrated))
+        ? ((!aOnB ? aBlind : bBlind) ? 'this cup keeps Megas off the boards'
+                                     : 'Master has no rating for a Mega, so it sits in the unrated group instead')
+        : null;
+      if(why) out += ` ⚠ Half a picture: I could not check whether <b>${hidden}</b> beats the other, because ${why}.`;
     }
     // a Tier-1 verdict on a real board is decisive; "comes down to shields" / even = leaning.
     return {state:'answer', html:out, conf};
@@ -6020,6 +6112,10 @@ function findSleepers(X, opts){
     else            out = `<b>${N}... look, I won't lie to you.</b> It has ${t1} hard counters, starting with <b>${esc(board[0].c.speciesName)}</b>. It gets deleted a lot. Run it for love, not for wins.`;
     if(typeof squad!=='undefined' && squad.some(e=>e.speciesId===mon.speciesId))
       out += ` And yes, I see it on your squad. My opinion stands.`;
+    /* ⚠ "Genuinely scary pick. Nothing hard-counters it" was reachable in
+       Master with unrated Megas sitting on the same board. An opinion may be an
+       opinion; it may not be built on a list that quietly left something out. */
+    out += unratedNote(board);
     return {state:'answer', html:out, conf:'opinion'};
   }
 
@@ -6037,6 +6133,24 @@ function findSleepers(X, opts){
       const msTxt = p.metaScore===null ? 'unranked by the meta' : 'meta score just '+p.metaScore;
       out += `${i+1}. <b>${esc(p.mon.speciesName)}</b> (${msTxt}) — eats ${eats}<br>`;
     });
+    /* ⭐ THE SLEEPER TALLY CANNOT INCLUDE AN UNRATED MEGA, and the reason is
+       structural rather than a choice made here: it weights every candidate by
+       (4 - tier), and an unrated mega has no tier. Splicing one in would not
+       produce a wrong rank, it would produce NaN and corrupt every entry in the
+       tally silently. Itachi named that before this was written.
+       So the list stays as it is and the gap is stated. */
+    let megaSeen = 0;
+    try{
+      const killers = findNightmares(mon, 6) || [];
+      const seen = new Set();
+      for(const K of killers)
+        for(const u of ((findNightmares(K.c, 22) || {}).unratedMegas || []))
+          seen.add(u.c.speciesId);
+      megaSeen = seen.size;
+    }catch(e){}
+    if(megaSeen) out += `<br>⚠ <b>${megaSeen} Mega${megaSeen===1?'':'s'}</b> also answer ${N}'s hunters, and none of them ` +
+      `are in the list above — Master has no rating for a Mega, so they cannot be weighed against these picks. ` +
+      `They are on the boards, shown unrated.<br>`;
     out += `<span style="opacity:.75">Boards don't see XL costs, IVs, or your badge grind — field-test before you invest.</span>`;
     // high read only when the top sleeper clears the bar with room: executes 3+ of the
     // target's killers AND sits genuinely off-meta. A 2-killer / near-ceiling pick = leaning.
@@ -6127,4 +6241,27 @@ function findSleepers(X, opts){
 
   /* test hook */
   window.__bnCoach = { parse, resolveMon, open: openPanel, close: closePanel };
+
+  /* ⭐⭐ ONE NAMED DOOR, so these four can be checked by something other than a
+     browser. Semiu ruled the bench BLIND without it and proved why: it could
+     not reach these functions, so it re-derived their decision and asserted on
+     the copy. She then neutered the real branch while leaving every literal
+     string in place, and all four assertions stayed green while the shipped app
+     went back to lying. A bench that checks its own reimplementation checks
+     nothing.
+
+     ⚠ IT IS A TEST SEAM IN SHIPPED CODE, said out loud rather than disguised.
+     It is read-only, hands out no state, and computes nothing the page does not
+     already compute when the user asks. The alternative was to keep asserting
+     against a copy of the logic, which is the thing that just failed. */
+  if(typeof globalThis !== 'undefined'){
+    /* ⚠ EXTEND, NEVER REPLACE. The first version of this wrote a fresh object
+       over window.__bnCoach, which ALREADY existed three lines above carrying
+       parse, resolveMon, open and close - so it destroyed resolveMon and
+       megatest crashed with "R is not a function". I picked a name that was
+       already taken and clobbered a live export. Object.assign onto whatever is
+       there, so this cannot happen again in either direction. */
+    globalThis.__bnCoach = Object.assign(globalThis.__bnCoach || {},
+      { voiceMatchup, voiceCounters, voiceOpinionMon, voiceSleepers, unratedNote });
+  }
 })();
