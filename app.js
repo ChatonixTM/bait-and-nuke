@@ -2119,7 +2119,7 @@ function renderResult(mon){
     ${researchTables}
 
     <div class="note tip-dismiss" data-tip="pvpNote"><button class="tip-x" aria-label="Dismiss tip">×</button>
-      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>🎯 Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> moves marked <b>🎫 Elite TM</b> can only be taught with an Elite TM, and <b>⛔ legacy</b> moves are no longer obtainable at all. Everything unmarked is available normally. Flags come from PvPoke's move data — still worth a glance in-game before spending candy. Full current roster (1595 Pokémon, 333 moves), synced from PvPoke's data.
+      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>🎯 Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> moves marked <b>🎫 Elite TM</b> can only be taught with an Elite TM, and <b>⛔ legacy</b> moves are no longer obtainable at all. Everything unmarked is available normally. Flags come from PvPoke's move data — still worth a glance in-game before spending candy. Full current roster (${POKEMON.length} Pokémon, ${Object.keys(MOVES).length} moves), synced from PvPoke's data.
     </div>
   `;
   RESULT.classList.add('show');
@@ -2586,6 +2586,10 @@ const DATA_VERSION = '2026-09-04';   // written by tests/refresh_roster.js --app
    has to trust. */
 let ROSTER_SYNCED_AT = null;
 function rosterLine(){
+  /* U1 (Oct 2 2026): the help panel read "1,595 Pokémon and 333 moves" while this line printed 1742 / 349 — a typed
+     figure goes stale; the panel now reads the same numbers this line does, every time the line is written */
+  document.querySelectorAll("[data-count=pokemon]").forEach((e) => { e.textContent = POKEMON.length.toLocaleString(); });
+  document.querySelectorAll("[data-count=moves]").forEach((e) => { e.textContent = Object.keys(MOVES).length.toLocaleString(); });
   const n = `Loaded ${POKEMON.length} Pokémon · ${Object.keys(MOVES).length} moves`;
   if(!ROSTER_SYNCED_AT) return `${n} — roster date unknown; this build expects ${DATA_VERSION}.`;
   if(ROSTER_SYNCED_AT !== DATA_VERSION){
