@@ -1,7 +1,7 @@
 # Runs the test suite automatically on every push to main.
 #
 # PLAIN ENGLISH: right now the tests only run when Itachi runs them by hand.
-# This makes GitHub run all 18 suites itself every time you upload a file.
+# This makes GitHub run every suite in package.json's test line itself, every time you upload a file.
 # If something breaks, you get a red X on the commit and an email — before
 # anyone opens the site. Nothing here touches the live site; it only checks.
 name: Tests

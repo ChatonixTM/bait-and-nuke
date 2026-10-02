@@ -1,6 +1,6 @@
 # Bait & Nuke — Test Rig
 
-18 suites, ~180 assertions. Browser tests run in Chromium via Playwright;
+Every suite is listed once, in package.json's `test` line (count it there; a typed number here went stale at 18 while the line grew to 27). Browser tests run in Chromium via Playwright;
 engine tests run the shipped `app.js` directly in Node.
 
 ## Run
