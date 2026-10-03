@@ -44,7 +44,12 @@ const acorn = require('acorn');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = 40;   // S4 (Oct 3): the cup banner and list, analysis risks, fit warnings, Sprocket's warnings drawn; CUPS lose their flavour glyphs (83 -> 40)
+const EXPECT = 0;    // S5 (Oct 3): the tour, tier cards, vault, toasts, jackpot, dex, Sprocket's chip drawn (40 -> 0). Done.
+/* KEPT BY HIS WORD. Marth, Oct 3, of the personality glyphs (Itachi's brief §6): "maybe emojis or skip it". So these
+   five stay stock emoji where they are — the nightmare scream, the egg hint's detective, the idle wink's eyes, the
+   jackpot's shrug, the dedication's handshake — and are counted EXACTLY (KEPT_EXPECT uses in the source), so one use more anywhere is red. */
+const KEPT = new Set(['😱', '🕵‍♀', '👀', '😌', '🤝']);   // 😱 🕵️‍♀️ 👀 😌 🤝, compared with variation selectors removed
+const KEPT_EXPECT = 8;
 const ALLOW = new Set(['©', '™', '↗', '↩', '♟']);
 const RE = /\p{Extended_Pictographic}️?(?:‍\p{Extended_Pictographic}️?)*/gu;
 const ROOT = path.join(__dirname, '..');
@@ -72,7 +77,45 @@ function census() {
   const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
   const by = { 'app.js': jsLiterals(read('app.js')), 'index.html': htmlGlyphs(read('index.html')), 'styles.css': cssGlyphs(read('styles.css')) };
   const all = Object.values(by).flat();
-  return { by, uses: all.length, distinct: new Set(all.map((g) => g.replace(/️/g, ''))) };
+  const kept = all.filter((g) => KEPT.has(g.replace(/\uFE0F/g, '')));
+  const rest = all.filter((g) => !KEPT.has(g.replace(/\uFE0F/g, '')));
+  return { by, uses: rest.length, kept: kept.length, distinct: new Set(all.map((g) => g.replace(/\uFE0F/g, ''))) };
+}
+
+/* THE SOURCE REFUSAL (Semiu, owed at S5) — A REFUSAL SET OVER NAMED FORMS, AND NO MORE. A glyph built at run time
+   is invisible to the census, so the shipped source may hold none of these named forms: a fromCodePoint call, a
+   fromCharCode with a surrogate-range literal, a numeric entity that decodes to a pictograph — in app.js AND in
+   index.html's own inline scripts, with comments blanked by the parser's own comment ranges (Semiu, Oct 3: a regex
+   strip ate a string holding "//", and the inline scripts were never walked; both fixed).
+   ⚠ WHAT IT IS NOT (Semiu's class ruling, Oct 3): an alias (const f = String.fromCodePoint), .call/.apply, computed
+   arguments — these are one class, a fence on the SPELLING of source, and no list of spellings closes it. What bounds
+   a run-time glyph is the sweep, in the witnessed states only; an unnamed form rendered only in an unwitnessed state
+   stays invisible, and this bench says so rather than adding spellings. */
+function builtGlyphs(js, html) {
+  const out = [];
+  const walk = (n) => {
+    if (!n || typeof n.type !== 'string') return;
+    if (n.type === 'CallExpression' && n.callee && n.callee.property) {
+      const name = n.callee.property.name || n.callee.property.value;
+      if (name === 'fromCodePoint') out.push('String.fromCodePoint(...)');
+      if (name === 'fromCharCode' && n.arguments.some((a) => a.type === 'Literal' && typeof a.value === 'number' && a.value >= 0xD800 && a.value <= 0xDFFF)) out.push('fromCharCode(surrogate)');
+    }
+    for (const k in n) { const v = n[k]; if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v.type === 'string') walk(v); }
+  };
+  const ent = (txt) => { for (const m of txt.matchAll(/&#(x[0-9a-f]+|\d+);/gi)) { const cp = m[1][0] === 'x' || m[1][0] === 'X' ? parseInt(m[1].slice(1), 16) : parseInt(m[1], 10); if (cp <= 0x10FFFF && /\p{Extended_Pictographic}/u.test(String.fromCodePoint(cp))) out.push(m[0]); } };
+  /* one script: walk its calls, then scan its text for entities with every comment blanked in place (same length,
+     so the parser's offsets stay true for the next comment) */
+  const scan = (code) => {
+    const comments = [];
+    walk(acorn.parse(code, { ecmaVersion: 'latest', sourceType: 'script', onComment: (block, text, s, e) => comments.push([s, e]) }));
+    let txt = code;
+    for (const [s, e] of comments) txt = txt.slice(0, s) + ' '.repeat(e - s) + txt.slice(e);
+    ent(txt);
+  };
+  scan(js);
+  const markup = html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, (m, code) => { scan(code); return ''; });
+  ent(markup.replace(/<!--[\s\S]*?-->/g, ''));
+  return out;
 }
 
 (async () => {
@@ -87,7 +130,24 @@ function census() {
   t('CONTROL — the census counts planted CSS content and ignores a CSS comment; the allow-list holds',
     cssGlyphs('/* 💣 */ .a::after{content:"⭐"} .b::after{content:"© ™"}').join() === '⭐');
 
+  t('CONTROL — the source refusal finds a fromCodePoint, a surrogate fromCharCode and a pictograph entity, and passes a plain entity (&#39;)',
+    builtGlyphs('const a = String.fromCodePoint(0x1F984); const b = String.fromCharCode(0xD83E, 0xDD84); const c = "&#39;";', '<b>&#x1F3A3;</b><i>&#39;</i>').join() === 'String.fromCodePoint(...),fromCharCode(surrogate),&#x1F3A3;');
+  t('CONTROL — the refusal reads index.html\'s own inline scripts, and an entity inside a string that holds "//" is still seen (Semiu K4, K7)',
+    builtGlyphs('const s = "see // note &#x1F3A3;"; // a comment &#x1F4A3;', '<script>const z = String.fromCodePoint(1);</script>').join() === '&#x1F3A3;,String.fromCodePoint(...)');
+  {
+    const r = builtGlyphs(fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8'), fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
+    t('THE SOURCE builds no glyph from a number (no fromCodePoint, no surrogate fromCharCode, no pictograph entity)', r.length === 0, r.join(', '));
+  }
+  /* THE DATA (Semiu, Oct 3: a kept 😱 put into a Pokemon's name passed 21/21 — the sweep allows the kept five
+     anywhere at run time and the census reads source only). The data the app fetches holds no pictograph at all,
+     the kept five included. What a player types and stores is their own text, and stays out of the count. */
+  {
+    const gm = fs.readFileSync(path.join(ROOT, 'gamemaster.json'), 'utf8');
+    const n = [...gm.matchAll(RE)].length;
+    t(`THE DATA (gamemaster.json, the one data file the app fetches) holds ${n} pictographs, the kept five included — it must hold none`, n === 0);
+  }
   const c = census();
+  t(`HIS KEPT FIVE (😱 🕵️‍♀️ 👀 😌 🤝, "maybe emojis or skip it") are used exactly ${KEPT_EXPECT} times — no more, no fewer`, c.kept === KEPT_EXPECT, 'found ' + c.kept);
   t(`THE CENSUS reads ${c.uses} stock emoji in the shipped source (app.js ${c.by['app.js'].length} · index.html ${c.by['index.html'].length} · styles.css ${c.by['styles.css'].length}), and the ratchet expects exactly ${EXPECT}`,
     c.uses === EXPECT, c.uses < EXPECT ? `fewer than recorded — lower EXPECT to ${c.uses} in this file, in the commit that removed them` : `MORE than recorded — a stock emoji was added; the per-file counts above say which file grew`);
 
@@ -104,9 +164,9 @@ function census() {
     if (st && st.act) await st.act(page);
     return { page, errs };
   };
-  const sweep = (page) => page.evaluate((src) => {
+  const sweep = (page) => page.evaluate(([src, allowed]) => {
     const RE = new RegExp(src, 'gu');
-    const ALLOW = new Set(['©', '™', '↗', '↩', '♟']);
+    const ALLOW = new Set(allowed);
     const found = [];
     const add = (where, s) => { for (const m of String(s).matchAll(RE)) if (!ALLOW.has(m[0].replace(/️/g, ''))) found.push({ g: m[0], where }); };
     const name = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : '');
@@ -118,7 +178,7 @@ function census() {
     }
     add('document.title', document.title);
     return found;
-  }, RE.source);
+  }, [RE.source, [...ALLOW, ...KEPT]]);
 
   // SWEEP CONTROL — one plant per channel the sweep claims, each found where it was planted, and exactly seven more
   {

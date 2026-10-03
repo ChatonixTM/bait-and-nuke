@@ -2660,27 +2660,27 @@ function loadData(){
     { selector:'.squad-slot:not(.filled), .squad-slots', title:'Build your squad',
       text:'Up to 3 Pokémon per team. We\'ve seated a <b>demo squad</b> — Azumarill, Medicham, Skarmory — so you can see everything alive during the tour. It clears itself when the tour ends; your real squad is untouched.' },
     { selector:'#quickAddBar, .search-shell', title:'The Command Deck', act: actGlideDeck,
-      text:'Your always-on toolbar — add to squad, ⚡ analyze, league picker, and chips for each squadmate. It <b>slides sideways</b> — watch it glide right now. On a phone, swipe it; on desktop, scroll it.',
+      text:'Your always-on toolbar — add to squad, ' + mark('bolt') + ' analyze, league picker, and chips for each squadmate. It <b>slides sideways</b> — watch it glide right now. On a phone, swipe it; on desktop, scroll it.',
       act(){ const bar=document.getElementById('quickAddBar'); if(!bar) return;
         setTimeout(()=>bar.scrollTo({left:160,behavior:'smooth'}), 350);
         setTimeout(()=>bar.scrollTo({left:0,behavior:'smooth'}), 1350); },
       },
-    { selector:'#quickAddBar, .search-shell', title:'⚡ Analyze synergy', act: actGlideDeck,
+    { selector:'#quickAddBar, .search-shell', title: mark('bolt') + ' Analyze synergy', act: actGlideDeck,
       text:'Unlocks at 2+ Pokémon. It reads your squad against <b>this league\'s</b> own power scale — Master League never gets judged by Great League\'s rules.' },
-    { selector:'.nightmare-card, #result', title:'👆 Tap any number', act: actTapTipDemo,
-      text:'Every stat explains itself — tap <b>⚡</b>, <b>💥</b>, <b>⏱</b>, or any table header and a plain-English bubble tells you exactly what it means. No jargon left behind.' },
-    { selector:'.squad-slot.filled, .squad-slots', title:'🔁 Jump between your mons', act: ()=>actPulse('.squad-slot.filled'),
-      text:'Once your squad has members, tap <b>any squad card</b> (or its chip in the Command Deck) to switch the whole view to that Pokémon — <b>your</b> moves, <b>your</b> kit, never rerolled. The IV tools tuck away behind one 🎯 button.' },
+    { selector:'.nightmare-card, #result', title:'Tap any number', act: actTapTipDemo,
+      text:'Every stat explains itself — tap <b>' + mark('bolt') + '</b>, <b>' + mark('blast') + '</b>, <b>' + mark('clock') + '</b>, or any table header and a plain-English bubble tells you exactly what it means. No jargon left behind.' },
+    { selector:'.squad-slot.filled, .squad-slots', title: mark('refresh') + ' Jump between your mons', act: ()=>actPulse('.squad-slot.filled'),
+      text:'Once your squad has members, tap <b>any squad card</b> (or its chip in the Command Deck) to switch the whole view to that Pokémon — <b>your</b> moves, <b>your</b> kit, never rerolled. The IV tools tuck away behind one ' + mark('target') + ' button.' },
     { selector:'.nightmare-card, #result', title:'😱 Worst Nightmares — in tiers', act: ()=>actPulse('.nightmare-card'),
-      text:'Search a mon and scroll to its threat board. <b>💀 Tier 1</b> hard-counters you (type advantage + fast shield pressure). <b>🪨 Tier 2</b> grinds you out — <i>no type advantage needed</i>. <b>🎲 Tier 3</b> looks scary but has no engine behind it.' ,
+      text:'Search a mon and scroll to its threat board. <b>' + mark('skull') + ' Tier 1</b> hard-counters you (type advantage + fast shield pressure). <b>' + mark('rock') + ' Tier 2</b> grinds you out — <i>no type advantage needed</i>. <b>' + mark('dice') + ' Tier 3</b> looks scary but has no engine behind it.' ,
       act(){ const c=document.querySelector('.nightmare-card'); if(!c) return;
         c.classList.remove('tour-pulse'); void c.offsetWidth; c.classList.add('tour-pulse');
         setTimeout(()=>c.classList.remove('tour-pulse'), 2200); },
       },
-    { selector:'.nightmare-card, #result', title:'🗂 Tap a nightmare — it stacks',
+    { selector:'.nightmare-card, #result', title:'Tap a nightmare — it stacks',
       text:'Opening a threat gives it its own <b>tab over your work</b> — your squad stays exactly where it was. <b>←</b> minimizes, <b>×</b> closes, and <b>Esc</b> always backs you out. No more losing progress to curiosity.' },
-    { selector:'#result, .main-content', title:'🧬 IVs are optional',
-      text:'It starts you on realistic <b>8/11/11</b>, so you can ignore this entirely. Or tap <b>🔢 "I only know my CP"</b> and enter CP + level — it reverse-solves your IVs, fixes a wrong level, and catches impossible numbers.' },
+    { selector:'#result, .main-content', title:'IVs are optional',
+      text:'It starts you on realistic <b>8/11/11</b>, so you can ignore this entirely. Or tap <b>"I only know my CP"</b> and enter CP + level — it reverse-solves your IVs, fixes a wrong level, and catches impossible numbers.' },
     { selector:'#tabTeams', title:'Teams',
       text:'Save your progress here — your built squads live in your own vault, ready whenever you come back.' },
     { selector:'#tabProfile', title:'Profile',
@@ -3163,7 +3163,7 @@ document.addEventListener('click', function(e){
     await saveDismissedTips();
     applyTipDismissals();
     rb.textContent = '✓ Tips restored';
-    setTimeout(()=>{ rb.textContent = '♻ Restore hidden tips'; }, 1500);
+    setTimeout(()=>{ rb.innerHTML = mark('refresh') + ' Restore hidden tips'; }, 1500);
   });
 })();
 
@@ -3371,7 +3371,7 @@ document.addEventListener('click', function(e){
     let flavor = '';
     if(theme === 'grey' && Math.random() < 0.6){
       ids = BUDGET_NORMAL.slice(); league = 'Great League';
-      flavor = '💪 Budget-normal special — no legendaries, all heart.';
+      flavor = 'Budget-normal special — no legendaries, all heart.';
     } else {
       ids = (pct >= 90 ? TOP[league] : POOLS[league]).slice();
     }
@@ -3379,7 +3379,7 @@ document.addEventListener('click', function(e){
     if(theme === 'yellow'){
       // electric: stat-boost users float to the front (70/30 atk/def energy)
       mons.sort((a,b)=> (hasBoostMove(b)?1:0) - (hasBoostMove(a)?1:0) || Math.random()-0.5);
-      flavor = '⚡ Boost-wired: charged moves here fish for stat boosts — ~70/30 attack/defense lean.';
+      flavor = mark('bolt') + ' Boost-wired: charged moves here fish for stat boosts — ~70/30 attack/defense lean.';
       const boosted = mons.filter(hasBoostMove);
       const rest = mons.filter(m=>!hasBoostMove(m)).sort(()=>Math.random()-0.5);
       mons = boosted.slice(0,2).concat(rest);
@@ -3420,7 +3420,7 @@ document.addEventListener('click', function(e){
   function showJackpot(theme){
     const pct = rollPct(theme);
     const built = buildTeam(theme, pct);
-    if(built.team.length < 3) return toast('the machine jammed — spin again 🎰');
+    if(built.team.length < 3) return toast('the machine jammed — spin again');
     pendingTeam = built;
     const rows = built.team.map(m=>{
       const {d} = loadoutFor(m);
@@ -3431,8 +3431,8 @@ document.addEventListener('click', function(e){
     }).join('');
     overlay.innerHTML = `
       <div class="jackpot-panel">
-        <div class="jp-head">🎰 JACKPOT</div>
-        <div class="jp-grade">${built.league} · <b>${pct}%</b> · grade <b>${grade(pct)}</b>${pct>=97?' 🔥':''}</div>
+        <div class="jp-head">${mark('star')} JACKPOT</div>
+        <div class="jp-grade">${built.league} · <b>${pct}%</b> · grade <b>${grade(pct)}</b>${pct>=97?' ' + mark('star'):''}</div>
         ${built.flavor ? `<div class="jp-flavor">${built.flavor}</div>` : ''}
         ${rows}
         <div class="jp-note">graded vs long-standing GBL meta cores — if you don't have these mons… sucks to suck 😌</div>
@@ -3491,12 +3491,12 @@ document.addEventListener('click', function(e){
       used = Number(r.value) || 0;
     }catch(e){ used = 0; }
     if(used >= dailyCap(theme)){
-      toast('🎰 vault empty on this theme today — switch themes or come back tomorrow');
+      toast('vault empty on this theme today — switch themes or come back tomorrow');
       return;
     }
     const fireChance = isPremium() ? 0.7 : 0.45;
     if(Math.random() > fireChance){
-      toast('SO close… the reels almost lined up 🎰');
+      toast('SO close… the reels almost lined up');
       return;
     }
     window.storage.set(key, String(used + 1)).catch(()=>{});
@@ -4738,15 +4738,15 @@ renderSquad();
 
 const TIER_FEATURES = {
   free: [
-    {icon:'🔍', title:'Full calculator access', desc:'Damage/energy numbers, squad builder, and synergy analysis — always free.'},
-    {icon:'🚫', title:'No saved teams', desc:'Builds reset when you close the tool.'}
+    {icon:'search', title:'Full calculator access', desc:'Damage/energy numbers, squad builder, and synergy analysis — always free.'},
+    {icon:'ban', title:'No saved teams', desc:'Builds reset when you close the tool.'}
   ],
   scout: [
-    {icon:'💾', title:'1 saved team per league', desc:'Lock in your best Great, Ultra, and Master League build.'},
-    {icon:'🔁', title:'Swap anytime', desc:'Overwrite your save whenever you want to try something new.'}
+    {icon:'save', title:'1 saved team per league', desc:'Lock in your best Great, Ultra, and Master League build.'},
+    {icon:'refresh', title:'Swap anytime', desc:'Overwrite your save whenever you want to try something new.'}
   ],
   vanguard: [
-    {icon:'💾', title:'3 saved teams per league', desc:'Keep multiple builds ready per league — no overwriting required.'},
+    {icon:'save', title:'3 saved teams per league', desc:'Keep multiple builds ready per league — no overwriting required.'},
     {icon:'♛', title:'Full vault access', desc:'The most save slots, the most flexibility.'}
   ]
 };
@@ -4781,7 +4781,7 @@ function renderTierUI(){
   const feats = TIER_FEATURES[tier] || [];
   TIER_FEATURE_LIST.innerHTML = feats.map(f => `
     <div class="tf-row">
-      <div class="tf-icon">${f.icon}</div>
+      <div class="tf-icon">${/^[a-z-]+$/.test(f.icon) ? mark(f.icon) : f.icon}</div>
       <div><div class="tf-title">${f.title}</div><div class="tf-desc">${f.desc}</div></div>
     </div>`).join('');
 
@@ -4856,7 +4856,7 @@ SAVE_BTN.addEventListener('click', async ()=>{
   const entry = {id: Date.now(), name: null, squad: JSON.parse(JSON.stringify(squad))};
   account.teams[league] = [...existing, entry];
   await persistAccount();
-  SAVE_MSG.textContent = `Saved to ${league} (${account.teams[league].length}/${cap} slots used). Tap ✏️ in the vault to name it.`;
+  SAVE_MSG.textContent = `Saved to ${league} (${account.teams[league].length}/${cap} slots used). Tap the pencil in the vault to name it.`;
   renderSavedTeams();
 });
 
@@ -4903,7 +4903,7 @@ function renderSavedTeams(){
           ${title}
           <div class="saved-card-actions">
             <button class="load-btn" data-league="${league}" data-id="${t.id}">load</button>
-            <button class="rename-btn" data-league="${league}" data-id="${t.id}" title="Name this team">✏️</button>
+            <button class="rename-btn" data-league="${league}" data-id="${t.id}" title="Name this team" aria-label="Name this team">${mark('pencil')}</button>
             <button class="del" data-league="${league}" data-id="${t.id}">delete</button>
           </div>
         </div>`;
@@ -4984,7 +4984,7 @@ function openSecretDex(){
         : (slug ? 'https://play.pokemonshowdown.com/sprites/ani/'+slug+'.gif' : staticSrc);
       return `<div class="sdex-cell" data-d="${d}" data-n="${escName(n)}"><img loading="lazy" src="${src}" alt="" data-static="${staticSrc}" onerror="if(this.src!==this.dataset.static){this.src=this.dataset.static;}else{this.remove();}"><div>#${d} ${escName(n)}</div></div>`;
     }).join('');
-    dex.innerHTML = `<div class="sdex-head"><span class="sdex-title">🥚 THE SECRET DEX</span><button class="sdex-close" aria-label="Close">×</button></div>
+    dex.innerHTML = `<div class="sdex-head"><span class="sdex-title">THE SECRET DEX</span><button class="sdex-close" aria-label="Close">×</button></div>
       <div class="sdex-sub">${seen.size} mons · tap a face for the big artwork · you found this. — for Shadow &amp; Rouge</div>
       <div class="sdex-grid">${cells}</div><div id="sdexBig"><img id="sdexBigImg" alt=""><span id="sdexBigName"></span></div>`;
     document.body.appendChild(dex);
@@ -5015,7 +5015,7 @@ function openSecretDex(){
     if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if(e.code === CODE[pos]){
       pos++;
-      if(pos === CODE.length){ pos = 0; console.log('%c🕹️ 30 LIVES. WELCOME, PLAYER ONE.', 'color:#f80;font-weight:bold'); openSecretDex(); }
+      if(pos === CODE.length){ pos = 0; console.log('%c30 LIVES. WELCOME, PLAYER ONE.', 'color:#f80;font-weight:bold'); openSecretDex(); }
     } else {
       pos = (e.code === CODE[0]) ? 1 : 0;
     }
@@ -5741,7 +5741,7 @@ function findSleepers(X, opts){
     <div class="coach-chips" id="coachChips">
       <button class="coach-chip" data-q="is my squad good?">Rate my squad</button>
       <button class="coach-chip" data-q="who beats azumarill?">Who beats Azumarill?</button>
-      <button class="coach-chip" data-q="sleepers for azumarill?">🔍 Find a sleeper</button>
+      <button class="coach-chip" data-q="sleepers for azumarill?">${mark('search')} Find a sleeper</button>
     </div>
     <form class="coach-inputrow" id="coachForm">
       <input id="coachInput" type="text" autocomplete="off" enterkeyhint="send"
