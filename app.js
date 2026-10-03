@@ -2616,7 +2616,7 @@ function rosterLine(){
   const n = `Loaded ${POKEMON.length} Pokémon · ${Object.keys(MOVES).length} moves`;
   if(!ROSTER_SYNCED_AT) return `${n} — roster date unknown; this build expects ${DATA_VERSION}.`;
   if(ROSTER_SYNCED_AT !== DATA_VERSION){
-    return `${n} — ⚠ this roster is from ${ROSTER_SYNCED_AT}, but this build ships ${DATA_VERSION}. `
+    return `${n} — this roster is from ${ROSTER_SYNCED_AT}, but this build ships ${DATA_VERSION}. `
          + `You are seeing a cached copy — hard-refresh to get the current one.`;
   }
   return `${n} — roster synced ${ROSTER_SYNCED_AT} from PvPoke's source.`;
@@ -3608,7 +3608,7 @@ setTimeout(()=>{ document.body.classList.add('theme-ready'); }, 250);
     window.__bnSquadHydrated = true;
   }catch(err){
     console.error(err);
-    STATUS.textContent = '⚠ Could not load gamemaster.json. If you opened this file directly, it needs to be served over http (Netlify does this) — a file:// page can\'t fetch its neighbours.';
+    STATUS.textContent = 'Could not load gamemaster.json. If you opened this file directly, it needs to be served over http (Netlify does this) — a file:// page can\'t fetch its neighbours.';
     STATUS.style.color = 'var(--amber)';
   }
 })();
@@ -3686,7 +3686,7 @@ const CUPS = [
      typo. It is encoded AS PUBLISHED and flagged; nobody here picked a
      boundary the sources do not give. */
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Sep 8 – Sep 15, 2026', emoji: '💠',
+    types: ALL_TYPES, window: 'Sep 8 – Sep 15, 2026',
     startISO: '2026-09-08T20:00:00Z', endISO: '2026-09-15T20:00:00Z', noTypeCup: true,
     megasAllowed: true, leagues: ['Great League', 'Ultra League', 'Master League'],
     /* the ownership/energy half of this note moved into renderCupBanner(), derived
@@ -3706,18 +3706,18 @@ const CUPS = [
         + 'has no cap and nobody rates megas there, so they are listed separately and '
         + 'unrated rather than given a made-up score.' },
   { name: 'Willpower Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['fighting','psychic','dark'], window: 'Sep 15 – Sep 22, 2026', emoji: '💪',
+    types: ['fighting','psychic','dark'], window: 'Sep 15 – Sep 22, 2026',
     startISO: '2026-09-15T20:00:00Z', endISO: '2026-09-22T20:00:00Z',
     banned: ['Gardevoir', 'Zorua', 'Zoroark'], megasUnstated: true },
   { name: 'Retro Cup: Great League Edition', league: 'Great League', cpCap: 1500,
     types: ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
-    window: 'Sep 22 – Sep 29, 2026', emoji: '🕹️',
+    window: 'Sep 22 – Sep 29, 2026',
     startISO: '2026-09-22T20:00:00Z', endISO: '2026-09-29T20:00:00Z', megasUnstated: true },
   { name: 'Mega Color Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['grass','fire','water','electric'], window: 'Sep 29 – Oct 6, 2026', emoji: '🎨',
+    types: ['grass','fire','water','electric'], window: 'Sep 29 – Oct 6, 2026',
     startISO: '2026-09-29T20:00:00Z', endISO: '2026-10-06T20:00:00Z', megasAllowed: true },
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Oct 6 – Oct 13, 2026', emoji: '💠',
+    types: ALL_TYPES, window: 'Oct 6 – Oct 13, 2026',
     startISO: '2026-10-06T20:00:00Z', endISO: '2026-10-13T20:00:00Z', noTypeCup: true,
     megasAllowed: true, leagues: ['Great League', 'Ultra League', 'Master League'],
     /* the same week, and the same sentence. It said nothing here before, so a
@@ -3728,19 +3728,19 @@ const CUPS = [
         + 'has no cap and nobody rates megas there, so they are listed separately and '
         + 'unrated rather than given a made-up score.' },
   { name: 'Little Cup', league: 'Great League', cpCap: 500,
-    types: ALL_TYPES, window: 'Oct 13 – Oct 20, 2026', emoji: '🐣',
+    types: ALL_TYPES, window: 'Oct 13 – Oct 20, 2026',
     startISO: '2026-10-13T20:00:00Z', endISO: '2026-10-20T20:00:00Z', noTypeCup: true,
     cannotFilter: 'Little Cup restricts by EVOLUTION STAGE, not type — only Pokemon that can '
         + 'still evolve and never have. This tool filters by type, so it has no way to tell '
         + 'you who qualifies. The board below is not a Little Cup board.' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['dragon','steel','fairy'], window: 'Oct 20 – Oct 27, 2026', emoji: '🐉',
+    types: ['dragon','steel','fairy'], window: 'Oct 20 – Oct 27, 2026',
     startISO: '2026-10-20T20:00:00Z', endISO: '2026-10-27T20:00:00Z', megasUnstated: true },
   { name: 'Mega Halloween Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['bug','poison','ghost','dark','fairy'], window: 'Oct 27 – Nov 3, 2026', emoji: '🎃',
+    types: ['bug','poison','ghost','dark','fairy'], window: 'Oct 27 – Nov 3, 2026',
     startISO: '2026-10-27T20:00:00Z', endISO: '2026-11-03T21:00:00Z', megasAllowed: true },
   { name: 'Mega Edition week (GL · UL · ML, Megas allowed)', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Nov 3 – Nov 10, 2026', emoji: '💠',
+    types: ALL_TYPES, window: 'Nov 3 – Nov 10, 2026',
     startISO: '2026-11-03T21:00:00Z', endISO: '2026-11-10T21:00:00Z', noTypeCup: true,
     megasAllowed: true, leagues: ['Great League', 'Ultra League', 'Master League'],
     /* the same week, and the same sentence. It said nothing here before, so a
@@ -3752,7 +3752,7 @@ const CUPS = [
         + 'unrated rather than given a made-up score.' },
   { name: '2026 GO LAIC Cup', league: 'Great League', cpCap: 1500,
     types: ['normal','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
-    window: 'Nov 10 – Nov 17, 2026', emoji: '🏆',
+    window: 'Nov 10 – Nov 17, 2026',
     startISO: '2026-11-10T21:00:00Z', endISO: '2026-11-17T21:00:00Z',
     banned: ['Chansey','Snorlax','Furret','Wobbuffet','Galarian Corsola','Kingdra','Medicham',
              'Altaria','Dusclops','Jellicent','Araquanid','Oranguru','Annihilape','Clodsire'],
@@ -3762,7 +3762,7 @@ const CUPS = [
         + 'be banned. Read the live calendar before you build.' },
   { name: '2026 GO LAIC Cup (second week, as published)', league: 'Great League', cpCap: 1500,
     types: ['normal','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon'],
-    window: 'Nov 18 – Nov 25, 2026', emoji: '🏆',
+    window: 'Nov 18 – Nov 25, 2026',
     startISO: '2026-11-18T21:00:00Z', endISO: '2026-11-25T21:00:00Z',
     banned: ['Chansey','Snorlax','Furret','Wobbuffet','Galarian Corsola','Kingdra','Medicham',
              'Altaria','Dusclops','Jellicent','Araquanid','Oranguru','Annihilape','Clodsire'],
@@ -3772,7 +3772,7 @@ const CUPS = [
     cannotFilter: 'Same fourteen banned Pokemon, Legendaries, Mythicals and Ultra Beasts as the '
         + 'first LAIC week, and Megas are not eligible. Type filtering cannot see any of it.' },
   { name: 'Mega Catch Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ALL_TYPES, window: 'Nov 24 – Dec 1, 2026', emoji: '🎣',
+    types: ALL_TYPES, window: 'Nov 24 – Dec 1, 2026',
     startISO: '2026-11-24T21:00:00Z', endISO: '2026-12-01T21:00:00Z', noTypeCup: true,
     megasAllowed: true,
     scheduleAnomaly: 'Overlaps the published LAIC week on Nov 24-25 — Niantic lists both. '
@@ -3781,15 +3781,15 @@ const CUPS = [
         + 'Mythicals are excluded. This tool cannot see when you caught anything, so it cannot '
         + 'tell you who qualifies.' },
   { name: 'Fantasy Cup: Ultra League Edition', league: 'Ultra League', cpCap: 2500,
-    types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
+    types: ['dragon','steel','fairy'], window: 'recent rotation' },
   { name: 'Fantasy Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['dragon','steel','fairy'], window: 'recent rotation', emoji: '🐉' },
+    types: ['dragon','steel','fairy'], window: 'recent rotation' },
   { name: 'Sunshine Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['normal','fire','grass','ground'], window: 'recent rotation', emoji: '☀️' },
+    types: ['normal','fire','grass','ground'], window: 'recent rotation' },
   { name: 'Summer Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['normal','fire','water','grass','electric','bug'], window: 'recent rotation', emoji: '🍉' },
+    types: ['normal','fire','water','grass','electric','bug'], window: 'recent rotation' },
   { name: 'Scroll Cup: Great League Edition', league: 'Great League', cpCap: 1500,
-    types: ['water','fighting','dark'], window: 'recent rotation', emoji: '📜' }
+    types: ['water','fighting','dark'], window: 'recent rotation' }
 ];
 // Pick the live cup by the clock; fall back to the most recently ended one.
 // v63: the encoded schedule has an end date. Once the clock passes it we are
@@ -3902,7 +3902,7 @@ function renderCupBanner(){
   if(cupCollapsed){
     el.innerHTML = `
       <button class="cup-thin" id="cupExpandBtn">
-        <span class="cup-thin-text">${cup.emoji || '🏆'} ${cup.live ? 'Now in GBL' : 'Previewing'}: <b>${cup.name}</b>${cupFilterActive ? ' · <span style="color:var(--signal)">filtering ✓</span>' : ''}</span>
+        <span class="cup-thin-text">${mark('cup')} ${cup.live ? 'Now in GBL' : 'Previewing'}: <b>${cup.name}</b>${cupFilterActive ? ' · <span style="color:var(--signal)">filtering ✓</span>' : ''}</span>
         <span class="cup-chev">▾</span>
       </button>`;
     document.getElementById('cupExpandBtn').addEventListener('click', ()=>{
@@ -3935,13 +3935,13 @@ function renderCupBanner(){
   el.innerHTML = `
     <button class="cup-min-btn" id="cupMinBtn" aria-label="Minimize banner">▴</button>
     <div>
-      <div class="cup-banner-text">${window.__bnCupScheduleStale ? '⚠️' : (cup.emoji || '🏆')} ${window.__bnCupScheduleStale ? 'Schedule out of date — check the live calendar' : (cup.live ? 'Now in GBL' : 'Previewing')}: <button class="cup-name-btn" id="cupNameBtn">${cup.name}</button></div>
+      <div class="cup-banner-text">${window.__bnCupScheduleStale ? mark('warning') : mark('cup')} ${window.__bnCupScheduleStale ? 'Schedule out of date — check the live calendar' : (cup.live ? 'Now in GBL' : 'Previewing')}: <button class="cup-name-btn" id="cupNameBtn">${cup.name}</button></div>
       <div class="cup-banner-sub">${cup.league} · ≤${cup.cpCap} CP · ${typesDisplay} · ${cup.window}${cup.cannotFilter ? ' · <b>this cup cannot be filtered here</b>' : (cupFilterActive ? ' · <b style="color:var(--signal)">search filtered to this cup ✓</b>' : ' · click the cup name to filter search')}</div>
       <div class="cup-banner-sub" id="cupClock">${bnCupClockText()}</div>
-      ${cup.note ? `<div class="cup-banner-note">⚠ ${cup.note}</div>` : ''}
-      ${cup.scheduleAnomaly ? `<div class="cup-banner-note">⚠ ${cup.scheduleAnomaly}</div>` : ''}
-      ${cup.megasUnstated ? `<div class="cup-banner-note">⚠ Whether Mega Evolved Pokemon are legal in this cup is <b>not stated</b> by any source we read — not stated is not the same as no. Check the live calendar.</div>` : ''}
-      ${cup.cannotFilter ? `<div class="cup-banner-note">⛔ ${cup.cannotFilter}</div>` : ''}
+      ${cup.note ? `<div class="cup-banner-note">${mark('warning')} ${cup.note}</div>` : ''}
+      ${cup.scheduleAnomaly ? `<div class="cup-banner-note">${mark('warning')} ${cup.scheduleAnomaly}</div>` : ''}
+      ${cup.megasUnstated ? `<div class="cup-banner-note">${mark('warning')} Whether Mega Evolved Pokemon are legal in this cup is <b>not stated</b> by any source we read — not stated is not the same as no. Check the live calendar.</div>` : ''}
+      ${cup.cannotFilter ? `<div class="cup-banner-note">${mark('ban')} ${cup.cannotFilter}</div>` : ''}
       ${/* ⚠ A BANLIST THIS FILTER CANNOT ENFORCE MUST BE NAMED — Obito's seventh
             sitting, and he proved it in a browser rather than arguing it. Willpower
             Cup bans Gardevoir, Zorua and Zoroark BY NAME, and all three pass its
@@ -3952,7 +3952,7 @@ function renderCupBanner(){
             ⚠ DERIVED FROM `banned`, NOT HAND-COPIED INTO EACH CUP'S NOTE. The bug
             below this one is what a hand-copied caveat does on the sixth cup. */''}
       ${Array.isArray(cup.banned) && cup.banned.length
-        ? `<div class="cup-banner-note">⚠ <b>${cup.banned.length} Pokémon are banned from this cup by name</b>, on top of its type rule:
+        ? `<div class="cup-banner-note">${mark('warning')} <b>${cup.banned.length} Pokémon are banned from this cup by name</b>, on top of its type rule:
              ${cup.banned.join(', ')}. The search filter here matches on TYPE only and cannot see a banlist,
              so a Pokémon can pass the filter and still be ineligible.</div>`
         : ''}
@@ -3964,7 +3964,7 @@ function renderCupBanner(){
             house treats as disqualifying. Read from the flag, so the next mega cup
             carries it without anybody remembering. */''}
       ${cup.megasAllowed
-        ? `<div class="cup-banner-note">⚠ Megas are legal in this cup, so these boards show them. Eligibility needs the
+        ? `<div class="cup-banner-note">${mark('warning')} Megas are legal in this cup, so these boards show them. Eligibility needs the
              Pokémon to actually BE Mega Evolved — an ownership and energy requirement this tool cannot check —
              so read every mega as "if you have it".</div>`
         : ''}
@@ -3977,12 +3977,12 @@ function renderCupBanner(){
             visible, easily ignored. It now silently covers whole boards
             changing composition, so it has to say that specifically. */''}
       ${window.__bnCupScheduleStale && cup.megasAllowed
-        ? `<div class="cup-banner-note">⚠ This mega week has <b>ended</b> and no newer schedule is
+        ? `<div class="cup-banner-note">${mark('warning')} This mega week has <b>ended</b> and no newer schedule is
              encoded, so these boards are still showing megas on a date when they may no longer be
              legal. Check the live calendar before trusting a mega on a board.</div>`
         : ''}
       <select class="cup-picker" id="cupPicker">
-        ${CUPS.map((c,i)=>`<option value="${i}" ${i===selectedCupIndex?'selected':''}>${c.live ? '🏆 ' : (c.emoji || '')} ${c.name}</option>`).join('')}
+        ${CUPS.map((c,i)=>`<option value="${i}" ${i===selectedCupIndex?'selected':''}>${c.live ? 'live · ' : ''}${c.name}</option>`).join('')}
       </select>
     </div>
     <a class="cup-banner-link" href="https://www.pogocalendar.com/" target="_blank" rel="noopener">Open live calendar ↗</a>
@@ -4091,7 +4091,7 @@ function renderSquad(){
           <div class="slot-archetype">${archetype}</div>
           <div class="mon-tags" style="margin-bottom:8px;">${typeBadges}${roleBadgeHtml(m.role)}${bulkBadgeHtml(m.bulk, m.role)}</div>
           <div class="slot-move">${m.bait ? `${m.castsBait} taps with <b>${m.fast.name}</b> charges <b>${m.bait.name}</b> (bait)<br>` : ''}${m.casts} taps with <b>${m.fast.name}</b> charges <b>${m.charged.name}</b> (nuke)<br>Dmg/sec: ${m.cycleDps.toFixed(2)}</div>
-          ${cupWarn ? `<div class="cup-warn">⚠ ${cupWarn}</div>` : ''}
+          ${cupWarn ? `<div class="cup-warn">${mark('warning')} ${cupWarn}</div>` : ''}
           <div class="slot-actions">
             <button class="slot-edit" draggable="false" data-id="${m.speciesId}">edit moveset</button>
             <button class="slot-remove" draggable="false" data-id="${m.speciesId}">remove</button>
@@ -4403,7 +4403,7 @@ function analyzeSquad(){
       });
     }catch(err){
       console.error(err);
-      ANALYSIS.innerHTML = `<div class="analysis-loading show">⚠ Analysis failed: ${err.message}</div>`;
+      ANALYSIS.innerHTML = `<div class="analysis-loading show">${mark('warning')} Analysis failed: ${err.message}</div>`;
     }finally{
       clearTimeout(revealTimer);
       ANALYZE_BTN.disabled = squad.length < 2;
@@ -4490,7 +4490,7 @@ function scoreSquadReal(){
 
   if(swept.length){
     score += 2;
-    risks.push(`🚨 <b>${swept.slice(0,3).map(s=>s[0]).join(', ')}</b> hard-counter${swept.length===1?'s':''} your <b>entire squad</b> — one switch and you have no answer.`);
+    risks.push(`${mark('warning')} <b>${swept.slice(0,3).map(s=>s[0]).join(', ')}</b> hard-counter${swept.length===1?'s':''} your <b>entire squad</b> — one switch and you have no answer.`);
   } else if(shared.length >= 3){
     score += 12;
     risks.push(`<b>${shared.slice(0,3).map(s=>s[0]).join(', ')}</b> each hard-counter 2 of your 3 — a shared soft spot.`);
@@ -4513,7 +4513,7 @@ function scoreSquadReal(){
     const many = [...unratedThreats.entries()].filter(([,e]) => e.n >= 2)
                    .sort((x,y) => y[1].n - x[1].n);
     const top = (many.length ? many : [...unratedThreats.entries()]).slice(0,3).map(([n]) => n);
-    risks.push(`⭕ <b>${top.join(', ')}</b> also threaten${top.length===1?'s':''} this squad, and ` +
+    risks.push(`${mark('ring')} <b>${top.join(', ')}</b> also threaten${top.length===1?'s':''} this squad, and ` +
       `${many.length ? `${many.length} of them hit two or more members` : 'they are Megas'} — but Master has no ` +
       `rating for a Mega, so <b>they are not counted in the score above</b>. Check their board directly.`);
   }
@@ -4543,7 +4543,7 @@ function scoreSquadReal(){
   const double    = Object.entries(weakN).filter(([,n])=>n===2).map(([t])=>t);
   if(universal.length){
     score += 3;
-    risks.push(`⚠ <b>Every member</b> is weak to <b>${universal.join(', ')}</b> — a stacked ${universal[0]} lead beats your whole team.`);
+    risks.push(`${mark('warning')} <b>Every member</b> is weak to <b>${universal.join(', ')}</b> — a stacked ${universal[0]} lead beats your whole team.`);
   } else if(double.length >= 3){
     score += 10; risks.push(`Two of three are weak to ${double.slice(0,3).join(', ')}.`);
   } else if(double.length){
@@ -4653,7 +4653,7 @@ function renderAnalysis(r){
     const g = f.masterGap;
     fitHtml = `
       <div class="fit-note fit-all">
-        <div class="fit-head">🚩 Undersized for Master League</div>
+        <div class="fit-head">${mark('warning')} Undersized for Master League</div>
         <ul class="fit-list">
           <li>Master has <b>no CP cap</b>, so nothing here is "short of the cap" — but your biggest ceiling is <b>${g.best}</b> CP against a meta whose median ceiling is <b>${g.median}</b>, measured across the <b>${g.poolSize}</b> ranked Master picks this app ships.</li>
           ${g.under.map(u=>`<li><b>${u.name}</b> tops out at <b>${u.ceiling}</b> — <b>${u.underMeta}</b> below that median.</li>`).join('')}
@@ -4665,7 +4665,7 @@ function renderAnalysis(r){
     const all = f.crushedOnes.length === (f.rows||[]).length;
     fitHtml = `
       <div class="fit-note ${all ? 'fit-all' : ''}">
-        <div class="fit-head">${all ? '🚩' : '⚠'} ${all ? 'This squad is too big for this league' : `${f.crushedOnes.length} of these are too big for this league`}</div>
+        <div class="fit-head">${mark('warning')} ${all ? 'This squad is too big for this league' : `${f.crushedOnes.length} of these are too big for this league`}</div>
         <ul class="fit-list">
           ${f.crushedOnes.map(c=>`<li><b>${c.name}</b> hits the ${f.cap} cap at <b>level ${c.crushed.atCap}</b> — the mons this app ranks for ${r.league} sit around <b>level ${c.crushed.med}</b> there. It is being squeezed into a fraction of itself.</li>`).join('')}
         </ul>
@@ -4680,7 +4680,7 @@ function renderAnalysis(r){
       ? `<div class="fit-move">You may be in the wrong league — this squad fills out in <b>${f.suggested}</b>.</div>` : '';
     fitHtml = `
       <div class="fit-note ${all ? 'fit-all' : ''}">
-        <div class="fit-head">${all ? '🚩' : '⚠'} ${f.shortOnes.length === 1 ? 'One of these' : `${f.shortOnes.length} of these`} can't reach the cap</div>
+        <div class="fit-head">${mark('warning')} ${f.shortOnes.length === 1 ? 'One of these' : `${f.shortOnes.length} of these`} can't reach the cap</div>
         <ul class="fit-list">${list}</ul>
         ${move}
       </div>`;
@@ -5921,7 +5921,7 @@ function findSleepers(X, opts){
     const u = (board && board.unratedMegas) || [];
     if(!u.length) return '';
     const names = u.slice(0,2).map(n => `<b>${esc(n.c.speciesName)}</b>`).join(' and ');
-    return ` ⚠ There ${u.length===1?'is':'are'} also ${u.length} <b>Mega</b>${u.length===1?'':'s'} on this board ` +
+    return ` ${mark('warning')} There ${u.length===1?'is':'are'} also ${u.length} <b>Mega</b>${u.length===1?'':'s'} on this board ` +
       `that I cannot rate — Master has no CP cap and nobody ranks Megas for it. ${names} among them. ` +
       `They are shown unrated at the bottom of the board; I am not going to pretend they are not there.`;
   }
@@ -6079,7 +6079,7 @@ function findSleepers(X, opts){
         ? ((!aOnB ? aBlind : bBlind) ? 'this cup keeps Megas off the boards'
                                      : 'Master has no rating for a Mega, so it sits in the unrated group instead')
         : null;
-      if(why) out += ` ⚠ Half a picture: I could not check whether <b>${hidden}</b> beats the other, because ${why}.`;
+      if(why) out += ` ${mark('warning')} Half a picture: I could not check whether <b>${hidden}</b> beats the other, because ${why}.`;
     }
     // a Tier-1 verdict on a real board is decisive; "comes down to shields" / even = leaning.
     return {state:'answer', html:out, conf};
@@ -6187,7 +6187,7 @@ function findSleepers(X, opts){
           seen.add(u.c.speciesId);
       megaSeen = seen.size;
     }catch(e){}
-    if(megaSeen) out += `<br>⚠ <b>${megaSeen} Mega${megaSeen===1?'':'s'}</b> also answer ${N}'s hunters, and none of them ` +
+    if(megaSeen) out += `<br>${mark('warning')} <b>${megaSeen} Mega${megaSeen===1?'':'s'}</b> also answer ${N}'s hunters, and none of them ` +
       `are in the list above — Master has no rating for a Mega, so they cannot be weighed against these picks. ` +
       `They are on the boards, shown unrated.<br>`;
     out += `<span style="opacity:.75">Boards don't see XL costs, IVs, or your badge grind — field-test before you invest.</span>`;

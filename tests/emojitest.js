@@ -44,7 +44,7 @@ const acorn = require('acorn');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = 83;   // S3 (Oct 3): the mon card drawn — tiers, threat stats, roles, bulk shields, IV tools, loadout (130 -> 83)
+const EXPECT = 40;   // S4 (Oct 3): the cup banner and list, analysis risks, fit warnings, Sprocket's warnings drawn; CUPS lose their flavour glyphs (83 -> 40)
 const ALLOW = new Set(['©', '™', '↗', '↩', '♟']);
 const RE = /\p{Extended_Pictographic}️?(?:‍\p{Extended_Pictographic}️?)*/gu;
 const ROOT = path.join(__dirname, '..');
