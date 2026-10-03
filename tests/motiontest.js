@@ -38,7 +38,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = { rules: 0, controls: 0, reduced: 0, dock: 5 };   // S3 (Oct 3): the nightmare-tab drop is character by his word (rules 1 -> 0); dock is S5
+const EXPECT = { rules: 0, controls: 0, reduced: 0, dock: 0 };   // S5 (Oct 3): Sprocket in his seat (dock 5 -> 0). U3's debt is paid: every ratchet at 0.
 const BEAT = 190;
 /* THE CHARACTER FINGERPRINT, measured Oct 3 after U3 S2 (deckNudge restored to 1.6s): every use of a personality
    keyframe as the browser serialises it. Retiming one is red; changing one on purpose means rewriting its line here. */
@@ -187,6 +187,10 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
     const d = document.getElementById('coachDock');
     if (!d || !vis(d) || d.classList.contains('hidden')) return { showing: false, hits: [] };
     const r = d.getBoundingClientRect();
+    /* U3 S5: showing means ON TOP — at his centre the page's topmost element is him (a sheet that covers the bar covers
+       him too, and then he covers nothing) */
+    const top = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+    if (!top || !(top === d || d.contains(top))) return { showing: false, hits: [], covered: true };
     const hits = [...document.querySelectorAll(q)].filter((e) => e !== d && !d.contains(e) && vis(e)).filter((e) => {
       const b = e.getBoundingClientRect(); return b.left < r.right && b.right > r.left && b.top < r.bottom && b.bottom > r.top;
     }).map((e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : ''));

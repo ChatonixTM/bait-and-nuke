@@ -2722,10 +2722,10 @@
    ============================================================================ */
 #coachDock{
   position:fixed;
-  right:14px;
-  bottom:calc(66px + env(safe-area-inset-bottom, 0px)); /* v68: clears the tab bar */
-  z-index:340;
-  width:64px;height:80px;
+  right:calc(50% - 25px);   /* U3 S5: his seat, the middle of the tab bar (Marth, Oct 3: "a seat at bottom of bar") */
+  bottom:env(safe-area-inset-bottom, 0px);
+  z-index:61;                      /* just above the bar (60); under every sheet, which covers the bar and him with it */
+  width:50px;height:62px;
   background:none;border:none;padding:0;cursor:pointer;
   filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));
   transition:transform var(--beat) var(--ease), opacity var(--beat) var(--ease);   /* U3: the dock shows and hides on the beat */
@@ -2965,3 +2965,11 @@ body::before{ content:''; position:fixed; inset:0; z-index:-1; pointer-events:no
   *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important;
     animation-delay:0s !important; transition-duration:.01ms !important; transition-delay:0s !important; scroll-behavior:auto !important; }
 }
+
+/* U3 S5 — SPROCKET'S SEAT: an empty middle slot in the tab bar, as wide as he is, so Teams and Profile sit either
+   side of him and never under him. */
+.tab-seat{ flex:0 0 66px; }
+/* U3 S5 — and he steps out of his seat while a sheet or a tab holds the page (body.tabs-open is the app's own
+   refcounted lock: the profile sheet, the vault, the help panel, the stacked mon tabs). The profile sheet lives in a
+   container stacked below his layer, so without this he sat on its Privacy row (motiontest measured it). */
+body.tabs-open #coachDock{ opacity:0; pointer-events:none; transform:translateY(8px); }

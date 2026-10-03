@@ -86,10 +86,15 @@ http.createServer((q,r)=>{ const f=path.join(DIST, q.url==='/'?'/index.html':q.u
     return Math.round(tb.top - fr.bottom);
   });
   t('footer glow runs flush to tab bar (gap ≤ 2px)', gap<=2, 'gap='+gap+'px');
-  t('Sprocket sits above the tab bar, not on it', await p.evaluate(()=>{
+  /* U3 S5 (Oct 3): this asserted "above the tab bar, not on it" until Marth gave him a seat IN it: "maybe give him a
+     seat at bottom of bar". Now: his box sits in the seat, inside the bar, and touches neither tab. */
+  t('Sprocket sits in his seat in the tab bar, touching neither tab', await p.evaluate(()=>{
     const d=document.getElementById('coachDock').getBoundingClientRect();
     const tb=document.querySelector('.tab-bar').getBoundingClientRect();
-    return d.bottom <= tb.top + 1;
+    const seat=document.querySelector('.tab-seat'); if(!seat) return false;
+    const s=seat.getBoundingClientRect(), cx=(d.left+d.right)/2;
+    const meets=(b)=>b.left<d.right&&b.right>d.left&&b.top<d.bottom&&b.bottom>d.top;
+    return cx>=s.left && cx<=s.right && d.bottom>=tb.top+10 && ![...document.querySelectorAll('.tab-item')].some(e=>meets(e.getBoundingClientRect()));
   }));
 
   console.log(`\n${pass} passed, ${fail} failed`);
