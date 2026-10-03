@@ -38,17 +38,18 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = { rules: 1, controls: 0, reduced: 0, dock: 5 };   // S4 (Oct 3): reduce motion everywhere (13 -> 0); rules 1 is the nightmare-tab drop held for his word; dock is S5
+const EXPECT = { rules: 0, controls: 0, reduced: 0, dock: 5 };   // S3 (Oct 3): the nightmare-tab drop is character by his word (rules 1 -> 0); dock is S5
 const BEAT = 190;
 /* THE CHARACTER FINGERPRINT, measured Oct 3 after U3 S2 (deckNudge restored to 1.6s): every use of a personality
    keyframe as the browser serialises it. Retiming one is red; changing one on purpose means rewriting its line here. */
-const CHARACTER_PRINT = ["0.32s ease 0s 1 normal none running tourNudge","0.3s ease 0s 1 normal none running jpPop","0.6s ease 0s 1 normal none running helpFlash","0.6s ease-in-out 0s infinite normal none running pulse","0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0s 1 normal none running ringFlex","0.7s ease 0s 1 normal none running bwSwivel","0.85s ease 0s 2 normal none running msPulse","0.85s ease-in-out 0s 4 normal none running qaNudge","0.9s ease-in-out 0s 2 normal none running tourPulse","1.15s ease-in-out 0s 2 normal none running goldSweep","1.15s linear 0s infinite normal none running rsSweep","1.1s ease-in-out 0s infinite normal none running swapPulse","1.4s ease-in-out 0s infinite normal none running goldSweep","1.6s ease-in-out 0s infinite normal none running deckNudge","1.8s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal forwards running decelSwivel","1.8s ease-in-out 0s infinite normal none running emblemPulse","1.8s ease-in-out 0s infinite normal none running pulse","14s linear 0s infinite normal none running idleSpin","1s cubic-bezier(0.16, 1, 0.3, 1) 0s 1 normal none running pingRipple","2.1s ease-out 0s infinite normal none running rsPulse","2.4s ease-in-out 0s infinite normal none running sparkleTwinkle","2.4s ease-out 0s 1 normal forwards running eggGlint","2.6s ease-in-out 0s infinite normal none running dwellBreath","3.5s ease-in-out 0s infinite normal none running tsbShimmer","5s ease-in 1.2s infinite normal none running shootingStar","auto linear 0s 1 normal forwards running emojiFall","confettiFall","showerFall"];
+const CHARACTER_PRINT = ["0.32s ease 0s 1 normal none running tourNudge","0.48s cubic-bezier(0.25, 0.7, 0.35, 1) 0s 1 normal none running tabCloudDrop","0.3s ease 0s 1 normal none running jpPop","0.6s ease 0s 1 normal none running helpFlash","0.6s ease-in-out 0s infinite normal none running pulse","0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0s 1 normal none running ringFlex","0.7s ease 0s 1 normal none running bwSwivel","0.85s ease 0s 2 normal none running msPulse","0.85s ease-in-out 0s 4 normal none running qaNudge","0.9s ease-in-out 0s 2 normal none running tourPulse","1.15s ease-in-out 0s 2 normal none running goldSweep","1.15s linear 0s infinite normal none running rsSweep","1.1s ease-in-out 0s infinite normal none running swapPulse","1.4s ease-in-out 0s infinite normal none running goldSweep","1.6s ease-in-out 0s infinite normal none running deckNudge","1.8s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal forwards running decelSwivel","1.8s ease-in-out 0s infinite normal none running emblemPulse","1.8s ease-in-out 0s infinite normal none running pulse","14s linear 0s infinite normal none running idleSpin","1s cubic-bezier(0.16, 1, 0.3, 1) 0s 1 normal none running pingRipple","2.1s ease-out 0s infinite normal none running rsPulse","2.4s ease-in-out 0s infinite normal none running sparkleTwinkle","2.4s ease-out 0s 1 normal forwards running eggGlint","2.6s ease-in-out 0s infinite normal none running dwellBreath","3.5s ease-in-out 0s infinite normal none running tsbShimmer","5s ease-in 1.2s infinite normal none running shootingStar","auto linear 0s 1 normal forwards running emojiFall","confettiFall","showerFall"];
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 /* CHARACTER — motion that is the app's personality or is long on purpose (Itachi's groups b and c). Named, so the
    list is read, not inferred. Keyframes: */
 const CHARACTER_KEYFRAMES = ['msPulse', 'qaNudge', 'emblemPulse', 'idleSpin', 'decelSwivel', 'showerFall', 'ringFlex', 'pingRipple',
   'pulse', 'eggGlint', 'helpFlash', 'deckNudge', 'goldSweep', 'jpPop', 'bwSwivel', 'emojiFall', 'tsbShimmer', 'sparkleTwinkle',
-  'shootingStar', 'dwellBreath', 'confettiFall', 'rsPulse', 'rsSweep', 'tourPulse', 'swapPulse', 'tourNudge'];
+  'shootingStar', 'dwellBreath', 'confettiFall', 'rsPulse', 'rsSweep', 'tourPulse', 'swapPulse', 'tourNudge',
+  'tabCloudDrop'];   // the nightmare-tab drop — Marth, Oct 3: "3 keep as is. its not slow to me"
 /* ...and selectors whose transition is character or a lesson: the radar emblem's fade and ring and the idle wink (U3
    S2, Oct 3 — named aside, not sped up), the pull-to-refresh cast, the tour's glide, Sprocket's rig */
 const CHARACTER_SELECTORS = [/^\.theme-mark$/, /^\.outer-ring$/, /^\.idle-wink$/, /\.pull-refresh/, /\.tour-spotlight/, /\.tour-caption/, /(^|[\s,>])\.coach\b|\.coach-|#coach/, /\.easter-caption/];
@@ -261,6 +262,32 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
     const ra = await a.page.evaluate(() => smooth()), rb = await b.page.evaluate(() => smooth());
     t(`SCROLLING — smooth() answers "${ra}" with reduce motion on, "${rb}" with it off`, ra === 'auto' && rb === 'smooth', ra + ' / ' + rb);
     await a.page.context().close(); await b.page.context().close();
+  }
+
+  /* ── 6 · NOTHING LANDS AND THEN UN-LANDS (U3 S3) — two timer races Itachi found ── */
+  {
+    const { page } = await open(null);
+    // (a) close the profile, reopen it inside 100 ms, open a section: it must still be open after the old 250 ms reset
+    const acc = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      openProfile(); await wait(50); closeProfile(); await wait(60); openProfile(); await wait(20);
+      const row = document.querySelector('.profile-row'); row.click(); await wait(400);
+      const sec = document.querySelectorAll('.profile-section.show').length;
+      closeProfile(); return sec;
+    });
+    t('A FAST REOPEN KEEPS ITS SECTION — close, reopen within 100 ms, open a section: still open 400 ms later', acc > 0, 'open sections: ' + acc);
+    // (b) a result rendered while the last one fades must survive the old fade's wipe
+    const res = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      selectPokemon('azumarill'); for (let k = 0; k < 60 && !document.getElementById('fastSelect'); k++) await wait(100);
+      fadeOutResult(true); await wait(80); renderResult(POKEMON.find((p) => p.speciesId === 'medicham')); await wait(500);
+      const kept = !!document.getElementById('fastSelect');
+      fadeOutResult(true); await wait(500);                       // CONTROL: with no newer result, the wipe does land
+      return { kept, wiped: !document.getElementById('fastSelect') };
+    });
+    t('A NEW RESULT SURVIVES THE OLD FADE — rendered 80 ms into a fade, still on screen after it', res.kept, JSON.stringify(res));
+    t('CONTROL 6 — with nothing newer, the fade still clears the result (so "survives" above is a reading)', res.wiped, JSON.stringify(res));
+    await page.context().close();
   }
 
   console.log('\n' + pass + '/' + (pass + fail) + ' PASSED');

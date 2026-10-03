@@ -967,6 +967,7 @@ function selectPokemon(speciesId){
 
   RESULT.classList.remove('compact-ivs');
   RESULT.classList.add('show');
+  resultGen++;   // U3 S3: the scan line is a newer result too
   RESULT.innerHTML = `<div class="scan-loading"><span class="scan-dot"></span>${msg}</div>`;
   const quickBar = document.getElementById('quickAddBar');
   if(quickBar) quickBar.classList.remove('show');
@@ -1980,6 +1981,7 @@ function switchToSquadMon(speciesId){
 }
 
 function renderResult(mon){
+  resultGen++;   // U3 S3: a newer result — a fade already in flight must not wipe it
   const fastList = (mon.fastMoves||[]).map(id => MOVES[id]).filter(Boolean);
   const chargedList = (mon.chargedMoves||[]).map(id => MOVES[id]).filter(Boolean);
 
@@ -4195,13 +4197,18 @@ function wireSquadDragAndDrop(){
 }
 
 let clearFadeTimer = null;
+/* U3 S3 (Oct 3): every render bumps this; a fade's wipe only lands if no newer result arrived while it faded
+   (Itachi: a result rendered inside the fade window was erased by the old timer) */
+let resultGen = 0;
 
 function fadeOutResult(fast){
   clearTimeout(clearFadeTimer);
   clearFadeTimer = null;
   RESULT.style.transition = fast ? 'opacity .3s ease' : 'opacity .8s ease';
   RESULT.style.opacity = '0';
+  const gen = resultGen;
   setTimeout(()=>{
+    if(gen !== resultGen) return;   // a newer result is showing — leave it
     RESULT.innerHTML = '';
     RESULT.classList.remove('show');
     RESULT.style.opacity = '';
@@ -5119,6 +5126,10 @@ function renderAccountPanel(){
 
 function openProfile(){
   if(PROFILE_OVERLAY.classList.contains('show')) return;   // v71: idempotent
+  /* U3 S3 (Oct 3): the accordion resets HERE, as the sheet opens — it used to reset 250 ms after a close, so a
+     close-then-reopen inside that window collapsed the section that had just been opened */
+  document.querySelectorAll('.profile-row').forEach(r=>r.classList.remove('open'));
+  document.querySelectorAll('.profile-section').forEach(s=>s.classList.remove('show'));
   renderAccountPanel();
   PROFILE_OVERLAY.classList.add('show');
   TAB_PROFILE.classList.add('open');
@@ -5133,11 +5144,7 @@ function closeProfile(){
   PROFILE_OVERLAY.classList.remove('show');
   TAB_PROFILE.classList.remove('open');
   lockBodyScroll(false);
-  // Reset accordion so Profile always opens fresh, nothing left expanded from last time.
-  setTimeout(()=>{
-    document.querySelectorAll('.profile-row').forEach(r=>r.classList.remove('open'));
-    document.querySelectorAll('.profile-section').forEach(s=>s.classList.remove('show'));
-  }, 250); // wait for the sheet's own close transition to finish first
+  // (U3 S3: the accordion now resets in openProfile, so Profile still always opens fresh — with no timer to race)
 }
 
 TAB_PROFILE.addEventListener('click', openProfile);
