@@ -21,11 +21,21 @@ jobs:
     steps:
       - name: Get the code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the whole history: the version check compares this push with where it started
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      # A push players can see must move the app-version, or the update banner never tells them (Oct 3 2026: S1-S3
+      # and the bubbles shipped under v74 and were caught by hand). Compares the push with the commit it started from.
+      - name: A push players can see moves the version
+        shell: bash
+        run: |
+          set -o pipefail
+          node tests/versionbump.js "${{ github.event.before }}" HEAD 2>&1 | tee -a test.log
 
       - name: Install test tools
         run: npm install --no-audit --no-fund
