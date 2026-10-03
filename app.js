@@ -2914,14 +2914,14 @@ function loadData(){
   }
 
   // If the tour was already taken on a previous visit, hide the pill from the start.
-  // Otherwise: let it be read for ~1.5s, then tuck it into a small 🎓 badge.
+  // Otherwise: let it be read for ~1.5s, then tuck it into a small badge (the drawn cap).
   window.storage?.get('recon-tour-done', false)
     .then(res => { if(res && res.value === '1') TRIGGER.style.display = 'none'; })
     .catch(()=>{});
   setTimeout(()=>{
     if(TRIGGER.style.display !== 'none' && !TRIGGER.classList.contains('shrunk')){
       TRIGGER.classList.add('shrunk');
-      TRIGGER.textContent = '🎓';
+      TRIGGER.innerHTML = mark('cap');   /* U2 S2 (Obito): the tucked badge is the drawn cap, not the stock one */
       TRIGGER.setAttribute('aria-label','Take the 30-second tour');
     }
   }, 1500);
@@ -3039,8 +3039,9 @@ function loadData(){
   const wm = document.querySelector('.main-content .brand-wordmark');
   if(!wm) return;
   const PALETTE = ['#4de8c9','#ff8a3d','#d69a00','#d6217a','#31586e'];
-  const BAIT_RAIN = ['🎣','🐟','🪝','💦','🐠'];
-  const NUKE_RAIN = ['💣','💥','🧨','☢️'];
+  /* U2: the rain is our own marks — [mark, colour]. The bait side falls in the teals, the nuke side in the fire. */
+  const BAIT_RAIN = [['hook','#4de8c9'],['hook','#31586e'],['hook','#7ff0da']];
+  const NUKE_RAIN = [['bomb','#ff8a3d'],['blast','#ff8a3d'],['blast','#d6217a'],['bomb','#d69a00']];
 
   function emojiRain(set){
     const n = 14 + Math.floor(Math.random()*8);
@@ -3048,7 +3049,8 @@ function loadData(){
       setTimeout(()=>{
         const d = document.createElement('span');
         d.className = 'emoji-drop';
-        d.textContent = set[Math.floor(Math.random()*set.length)];
+        const [mk, col] = set[Math.floor(Math.random()*set.length)];
+        d.innerHTML = mark(mk); d.style.color = col;
         d.style.left = (Math.random()*94 + 2) + 'vw';
         d.style.fontSize = (16 + Math.random()*16) + 'px';
         d.style.setProperty('--spin', (Math.random()*720 - 360) + 'deg');
@@ -3198,7 +3200,7 @@ document.addEventListener('click', function(e){
 (function(){
   const fw = document.querySelector('.site-footer .brand-wordmark');
   if(!fw) return;
-  const GOLD_RAIN = ['✨','⭐','🌟','💛','🔶','🏆'];
+  const GOLD_RAIN = ['star','star','heart','cup'];   /* U2: our own marks, all in gold */
   fw.addEventListener('click', ()=>{
     if(window.__bnLongPress){ window.__bnLongPress = false; return; } // dedication took this one
     // shimmer sweep
@@ -3229,7 +3231,7 @@ document.addEventListener('click', function(e){
       setTimeout(()=>{
         const d = document.createElement('span');
         d.className = 'emoji-drop';
-        d.textContent = GOLD_RAIN[Math.floor(Math.random()*GOLD_RAIN.length)];
+        d.innerHTML = mark(GOLD_RAIN[Math.floor(Math.random()*GOLD_RAIN.length)]); d.style.color = '#d69a00';
         d.style.left = (Math.random()*94 + 2) + 'vw';
         d.style.fontSize = (14 + Math.random()*18) + 'px';
         d.style.setProperty('--spin', (Math.random()*720 - 360) + 'deg');
@@ -4693,11 +4695,12 @@ function renderAnalysis(r){
 
 function launchConfetti(container){
   if(!container) return;
-  const pieces = ['🎉','✨','🏆','💥','🎊'];
+  const pieces = [['star','#d69a00'],['blast','#ff8a3d'],['cup','#d69a00'],['star','#4de8c9'],['blast','#d6217a']];   /* U2: our own marks */
   for(let i=0; i<24; i++){
     const span = document.createElement('span');
     span.className = 'confetti-piece';
-    span.textContent = pieces[Math.floor(Math.random()*pieces.length)];
+    const [mk, col] = pieces[Math.floor(Math.random()*pieces.length)];
+    span.innerHTML = mark(mk); span.style.color = col;
     span.style.left = (Math.random()*100) + '%';
     span.style.animationDelay = (Math.random()*0.4) + 's';
     span.style.animationDuration = (1.6 + Math.random()*0.8) + 's';
@@ -5257,15 +5260,15 @@ document.addEventListener('keydown', (e)=>{
     if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if(e.key.length !== 1) return;
     buffer = (buffer + e.key).slice(-4).toUpperCase();
-    if(buffer === 'NUKE') emojiShower('💣');
-    if(buffer === 'BAIT') emojiShower('🎣');
+    if(buffer === 'NUKE') emojiShower('bomb', '#ff8a3d');
+    if(buffer === 'BAIT') emojiShower('hook', '#4de8c9');
   });
 
-  function emojiShower(emoji){
+  function emojiShower(mk, col){   /* U2: a shower of one drawn mark */
     for(let i=0; i<28; i++){
       const span = document.createElement('span');
       span.className = 'shower-piece';
-      span.textContent = emoji;
+      span.innerHTML = mark(mk); span.style.color = col;
       span.style.left = (Math.random()*100) + 'vw';
       span.style.animationDelay = (Math.random()*0.5) + 's';
       span.style.animationDuration = (1.8 + Math.random()*1.2) + 's';
@@ -5531,13 +5534,13 @@ document.addEventListener('keydown', (e)=>{
   const glints = btn ? btn.querySelector('.egg-glints') : null;
   if(!btn || !reveal || !glints) return;
 
-  const GLYPHS = ['🕵️‍♀️','👨🏽‍🏫','✨','🎣','💣','🎰','💌','🐟'];
+  const GLYPHS = ['hook','bomb','star','heart'];   /* U2: our own marks (faces, people and fish are never drawn) */
   let timer = null;
 
   function pop(){
     const s = document.createElement('span');
     s.className = 'egg-glint';
-    s.textContent = GLYPHS[Math.floor(Math.random()*GLYPHS.length)];
+    s.innerHTML = mark(GLYPHS[Math.floor(Math.random()*GLYPHS.length)]);
     s.style.left = (8 + Math.random()*84) + '%';
     s.style.animationDelay = (Math.random()*0.4) + 's';
     glints.appendChild(s);

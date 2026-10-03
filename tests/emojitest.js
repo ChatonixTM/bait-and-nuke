@@ -44,7 +44,7 @@ const acorn = require('acorn');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = 204;   // S1 (Oct 3): the sheet and the guard only, no app text changed — this is the census before any glyph moves
+const EXPECT = 130;   // S2 (Oct 3): the chrome, the logo, the five rain sets and the tucked tour badge drawn (204 -> 130); index.html keeps only the three held for his word (😱 🕵️‍♀️ 🤝)
 const ALLOW = new Set(['©', '™', '↗', '↩', '♟']);
 const RE = /\p{Extended_Pictographic}️?(?:‍\p{Extended_Pictographic}️?)*/gu;
 const ROOT = path.join(__dirname, '..');

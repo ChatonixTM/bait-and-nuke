@@ -2937,3 +2937,9 @@ select, input[type=number]{ min-height:var(--tap); }
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 .bn-mark{ width:1em; height:1em; display:inline-block; vertical-align:-.14em; flex:none; overflow:visible;
   fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+/* S2 · the brand pair takes its word's colour: the hook is Bait's teal, the bomb is Nuke's amber (the stock glyphs
+   carried their own colours; a drawn mark takes the text's, which in the wordmark is the pale ink). A touch heavier,
+   because at 0.85em of the wordmark a 2px stroke reads thin. */
+.brand-wordmark .bw-emoji:first-child .bn-mark{ color:var(--signal); stroke-width:2.4; }
+.brand-wordmark .bw-emoji:last-child .bn-mark{ color:var(--amber); stroke-width:2.4; }
+.pull-refresh .pr-hook .bn-mark{ color:var(--signal); stroke-width:2.2; }
