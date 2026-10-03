@@ -38,7 +38,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = { rules: 1, controls: 0, reduced: 13, dock: 5 };   // S2 (Oct 3): the 190 pass (rules 41 -> 1, the nightmare-tab drop held for his word; controls 24 -> 0; reduced 66 -> 13, the restored chevron counted) — S3-S5 drive the rest to 0
+const EXPECT = { rules: 1, controls: 0, reduced: 0, dock: 5 };   // S4 (Oct 3): reduce motion everywhere (13 -> 0); rules 1 is the nightmare-tab drop held for his word; dock is S5
 const BEAT = 190;
 /* THE CHARACTER FINGERPRINT, measured Oct 3 after U3 S2 (deckNudge restored to 1.6s): every use of a personality
    keyframe as the browser serialises it. Retiming one is red; changing one on purpose means rewriting its line here. */
@@ -237,7 +237,7 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
     t('CONTROL 3 — with no motion preference the page does run motion longer than 1 ms (so a zero below is a reading, not blindness)', free.length > 0, String(free.length));
     { const b = await open(STATES[0], { reduce: true });
       const r0 = await longest(b.page);
-      await b.page.evaluate(() => { const st = document.createElement('style'); st.textContent = '@keyframes plantSpin{to{opacity:.5}} #search::after{content:"";animation:plantSpin 2s infinite}'; document.head.appendChild(st); });
+      await b.page.evaluate(() => { const st = document.createElement('style'); st.textContent = '@keyframes plantSpin{to{opacity:.5}} #search::after{content:"";animation:plantSpin 2s infinite !important}'; document.head.appendChild(st); });   /* !important on an id: the plant must outrank S4's own reduce rule, or the control goes blind */
       const r1 = await longest(b.page);
       t('CONTROL 3b — Semiu\'s plant: a 2 s keyframe on #search::after is seen under "reduce motion"', r1.some((x) => x.startsWith('input#search::after')) && r1.length === r0.length + 1, JSON.stringify(r1.filter((x) => x.includes('::after')).slice(0, 4)));
       await b.page.context().close(); }
@@ -249,6 +249,18 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
     }
     ratchet('reduced', reduced.size, 'REDUCED MOTION — distinct elements still moving longer than 1 ms with "reduce motion" on');
     if (reduced.size) console.log('     ' + [...reduced].slice(0, 30).join('\n     ') + (reduced.size > 30 ? `\n     … and ${reduced.size - 30} more` : ''));
+  }
+
+  /* ── 5 · SCROLLING JUMPS UNDER REDUCE (U3 S4) — every smooth scroll asks smooth(); none is written literally ── */
+  {
+    const src = require('fs').readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+    const literal = (src.match(/behavior\s*:\s*['"]smooth['"]/g) || []).length, routed = (src.match(/behavior\s*:\s*smooth\(\)/g) || []).length;
+    t(`SCROLLING — ${routed} smooth scrolls ask smooth(); ${literal} written as a literal 'smooth' (must be 0)`, literal === 0 && routed > 0, literal + ' literal');
+    t('CONTROL 5 — the count reads a planted literal', (('x.scrollTo({behavior:\'smooth\'})').match(/behavior\s*:\s*['"]smooth['"]/g) || []).length === 1);
+    const a = await open(null, { reduce: true }), b = await open(null);
+    const ra = await a.page.evaluate(() => smooth()), rb = await b.page.evaluate(() => smooth());
+    t(`SCROLLING — smooth() answers "${ra}" with reduce motion on, "${rb}" with it off`, ra === 'auto' && rb === 'smooth', ra + ' / ' + rb);
+    await a.page.context().close(); await b.page.context().close();
   }
 
   console.log('\n' + pass + '/' + (pass + fail) + ' PASSED');

@@ -2866,7 +2866,7 @@
    One block, appended LAST so it wins without editing the rules above; removing it restores the old look whole.
    ═══════════════════════════════════════════════════════════════════════════ */
 :root{ --beat:190ms; --ease:cubic-bezier(.22,1,.36,1); --tap:44px; --r-btn:10px; --press:.96; }
-@media (prefers-reduced-motion: reduce){ :root{ --beat:0ms; } }
+@media (prefers-reduced-motion: reduce){ :root{ --beat:.01ms; } }   /* U3 S4: .01ms, not 0 — an animationend still fires */
 
 /* EVERY button, derived from the element — never a hand-typed list of classes (the old 20-class list missed six) */
 button{
@@ -2958,4 +2958,10 @@ body::before{ content:''; position:fixed; inset:0; z-index:-1; pointer-events:no
   background-image:var(--bubbles, none); background-size:600px 900px; opacity:.75; }
 
 .profile-overlay.show .profile-sheet{ transform:none; }
-.vip-overlay.show .vip-panel{ transform:none; }
+.vip-overlay.show .vip-panel{ transform:none; }/* U3 S4 — REDUCE MOTION, EVERYWHERE (Oct 3). With the phone's "reduce motion" on, nothing moves: every transition and
+   animation, pseudo-elements included, collapses to .01ms (not 0, so animationend handlers in app.js still fire),
+   loops run once, and scrolling jumps. Kept last, so no later rule can undo it. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important;
+    animation-delay:0s !important; transition-duration:.01ms !important; transition-delay:0s !important; scroll-behavior:auto !important; }
+}

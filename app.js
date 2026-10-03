@@ -936,7 +936,7 @@ let lastSearchAt = 0;
 function nudgeResultIntoView(){
   const r = RESULT.getBoundingClientRect();
   if(r.top < 0 || r.top > window.innerHeight * 0.55){
-    RESULT.scrollIntoView({behavior:'smooth', block:'start'});
+    RESULT.scrollIntoView({behavior:smooth(), block:'start'});
   }
 }
 
@@ -2380,7 +2380,7 @@ function renderQuickAddBar(mon){
   if(becameFull){
     // (Cannot re-trigger the yank: v68 gates yanking on real user gestures.)
     const shellEl = document.querySelector('.search-shell');
-    if(shellEl) setTimeout(()=> shellEl.scrollIntoView({behavior:'smooth', block:'start'}), 150);
+    if(shellEl) setTimeout(()=> shellEl.scrollIntoView({behavior:smooth(), block:'start'}), 150);
   }
   requestAnimationFrame(()=>{
     if(bar.__bnUserScrolling) return;
@@ -2395,7 +2395,7 @@ function renderQuickAddBar(mon){
     if(!hiddenLeft && !hiddenRight) return;          // already visible, leave it
     const delta = hiddenRight ? (tBox.right - barBox.right + 16)
                               : (tBox.left - barBox.left - 16);
-    bar.scrollTo({ left: bar.scrollLeft + delta, behavior: 'smooth' });
+    bar.scrollTo({ left: bar.scrollLeft + delta, behavior:smooth() });
   });
 
   // Show the chevron only when content ACTUALLY overflows, and retract it once
@@ -2662,8 +2662,8 @@ function loadData(){
     { selector:'#quickAddBar, .search-shell', title:'The Command Deck', act: actGlideDeck,
       text:'Your always-on toolbar — add to squad, ' + mark('bolt') + ' analyze, league picker, and chips for each squadmate. It <b>slides sideways</b> — watch it glide right now. On a phone, swipe it; on desktop, scroll it.',
       act(){ const bar=document.getElementById('quickAddBar'); if(!bar) return;
-        setTimeout(()=>bar.scrollTo({left:160,behavior:'smooth'}), 350);
-        setTimeout(()=>bar.scrollTo({left:0,behavior:'smooth'}), 1350); },
+        setTimeout(()=>bar.scrollTo({left:160,behavior:smooth()}), 350);
+        setTimeout(()=>bar.scrollTo({left:0,behavior:smooth()}), 1350); },
       },
     { selector:'#quickAddBar, .search-shell', title: mark('bolt') + ' Analyze synergy', act: actGlideDeck,
       text:'Unlocks at 2+ Pokémon. It reads your squad against <b>this league\'s</b> own power scale — Master League never gets judged by Great League\'s rules.' },
@@ -2750,7 +2750,7 @@ function loadData(){
     if(__settleT){ clearInterval(__settleT); __settleT = null; }
     const isFixed = getComputedStyle(el).position === 'fixed';
     if(isFixed){ place(); return; }
-    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.scrollIntoView({behavior:smooth(), block:'center'});
     // wait until the smooth scroll actually lands: two stable rect reads in a row
     let lastTop = null, stable = 0, tries = 0;
     __settleT = setInterval(()=>{
@@ -2860,8 +2860,8 @@ function loadData(){
     const bar = document.getElementById('quickAddBar');
     if(!bar || bar.scrollWidth <= bar.clientWidth + 8) return;
     const max = Math.min(160, bar.scrollWidth - bar.clientWidth);
-    bar.scrollTo({left: max, behavior:'smooth'});
-    setTimeout(()=> bar.scrollTo({left: 0, behavior:'smooth'}), 750);
+    bar.scrollTo({left: max, behavior:smooth()});
+    setTimeout(()=> bar.scrollTo({left: 0, behavior:smooth()}), 750);
   }
   function actPulse(sel){
     const el = document.querySelector(sel);
@@ -3449,7 +3449,7 @@ document.addEventListener('click', function(e){
       squad = pendingTeam.team.map(m => loadoutFor(m).entry);
       renderSquad();
       overlay.classList.remove('show');
-      document.getElementById('squadPanel')?.scrollIntoView({behavior:'smooth', block:'start'});
+      document.getElementById('squadPanel')?.scrollIntoView({behavior:smooth(), block:'start'});
     });
   }
 
@@ -4124,7 +4124,7 @@ function renderSquad(){
   });
   [...SQUAD_SLOTS.querySelectorAll('.squad-slot:not(.filled)')].forEach(slot=>{
     slot.addEventListener('click', ()=>{
-      SEARCH.scrollIntoView({behavior:'smooth', block:'center'});
+      SEARCH.scrollIntoView({behavior:smooth(), block:'center'});
       SEARCH.focus();
     });
   });
@@ -4399,7 +4399,7 @@ function analyzeSquad(){
       // computes something and leaves you scrolled somewhere else.
       requestAnimationFrame(()=>{
         const card = ANALYSIS.querySelector('.analysis-card') || ANALYSIS;
-        card.scrollIntoView({behavior:'smooth', block:'center'});
+        card.scrollIntoView({behavior:smooth(), block:'center'});
       });
     }catch(err){
       console.error(err);
@@ -4809,7 +4809,7 @@ function renderTierUI(){
 
 TIER_CTA.addEventListener('click', ()=>{
   if(TIER_CTA.disabled) return;
-  TIER_CARDS_EL.scrollIntoView({behavior:'smooth', block:'center'});
+  TIER_CARDS_EL.scrollIntoView({behavior:smooth(), block:'center'});
   TIER_CARDS_EL.style.transition = 'box-shadow .3s ease';
   TIER_CARDS_EL.style.boxShadow = '0 0 0 3px rgba(var(--glow-rgb),0.3)';
   setTimeout(()=>{ TIER_CARDS_EL.style.boxShadow = 'none'; }, 900);
@@ -4866,7 +4866,7 @@ function loadSavedTeam(league, id){
   squad = JSON.parse(JSON.stringify(entry.squad));
   LEAGUE_SELECT.value = league;
   renderSquad();
-  window.scrollTo({top: SQUAD_SLOTS.getBoundingClientRect().top + window.scrollY - 100, behavior:'smooth'});
+  window.scrollTo({top: SQUAD_SLOTS.getBoundingClientRect().top + window.scrollY - 100, behavior:smooth()});
 }
 
 async function deleteSavedTeam(league, id){
@@ -4885,6 +4885,9 @@ function mark(name, cls){
   if(!s || s.tagName.toLowerCase() !== 'symbol') throw new Error('no drawn mark "' + name + '"');
   return '<svg class="bn-mark' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#bn-' + name + '"/></svg>';
 }
+/* U3 S4 (Oct 3): every smooth scroll asks this, so a phone set to "reduce motion" jumps instead of gliding. A
+   function, not a constant: the setting can change while the page is open. */
+function smooth(){ return (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) ? "auto" : "smooth"; }
 function escName(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function renderSavedTeams(){
