@@ -38,16 +38,20 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { STATES, witnessed } = require('./bn-states.js');
 
-const EXPECT = { rules: 41, controls: 24, reduced: 66, dock: 5 };   // S1 (Oct 3): today's tree, re-measured after Semiu's ruling — U3's slices drive each to 0
+const EXPECT = { rules: 1, controls: 0, reduced: 13, dock: 5 };   // S2 (Oct 3): the 190 pass (rules 41 -> 1, the nightmare-tab drop held for his word; controls 24 -> 0; reduced 66 -> 13, the restored chevron counted) — S3-S5 drive the rest to 0
 const BEAT = 190;
+/* THE CHARACTER FINGERPRINT, measured Oct 3 after U3 S2 (deckNudge restored to 1.6s): every use of a personality
+   keyframe as the browser serialises it. Retiming one is red; changing one on purpose means rewriting its line here. */
+const CHARACTER_PRINT = ["0.32s ease 0s 1 normal none running tourNudge","0.3s ease 0s 1 normal none running jpPop","0.6s ease 0s 1 normal none running helpFlash","0.6s ease-in-out 0s infinite normal none running pulse","0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0s 1 normal none running ringFlex","0.7s ease 0s 1 normal none running bwSwivel","0.85s ease 0s 2 normal none running msPulse","0.85s ease-in-out 0s 4 normal none running qaNudge","0.9s ease-in-out 0s 2 normal none running tourPulse","1.15s ease-in-out 0s 2 normal none running goldSweep","1.15s linear 0s infinite normal none running rsSweep","1.1s ease-in-out 0s infinite normal none running swapPulse","1.4s ease-in-out 0s infinite normal none running goldSweep","1.6s ease-in-out 0s infinite normal none running deckNudge","1.8s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal forwards running decelSwivel","1.8s ease-in-out 0s infinite normal none running emblemPulse","1.8s ease-in-out 0s infinite normal none running pulse","14s linear 0s infinite normal none running idleSpin","1s cubic-bezier(0.16, 1, 0.3, 1) 0s 1 normal none running pingRipple","2.1s ease-out 0s infinite normal none running rsPulse","2.4s ease-in-out 0s infinite normal none running sparkleTwinkle","2.4s ease-out 0s 1 normal forwards running eggGlint","2.6s ease-in-out 0s infinite normal none running dwellBreath","3.5s ease-in-out 0s infinite normal none running tsbShimmer","5s ease-in 1.2s infinite normal none running shootingStar","auto linear 0s 1 normal forwards running emojiFall","confettiFall","showerFall"];
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 /* CHARACTER — motion that is the app's personality or is long on purpose (Itachi's groups b and c). Named, so the
    list is read, not inferred. Keyframes: */
 const CHARACTER_KEYFRAMES = ['msPulse', 'qaNudge', 'emblemPulse', 'idleSpin', 'decelSwivel', 'showerFall', 'ringFlex', 'pingRipple',
   'pulse', 'eggGlint', 'helpFlash', 'deckNudge', 'goldSweep', 'jpPop', 'bwSwivel', 'emojiFall', 'tsbShimmer', 'sparkleTwinkle',
   'shootingStar', 'dwellBreath', 'confettiFall', 'rsPulse', 'rsSweep', 'tourPulse', 'swapPulse', 'tourNudge'];
-/* ...and selectors whose transition is character or a lesson: the pull-to-refresh cast, the tour's glide, Sprocket's rig */
-const CHARACTER_SELECTORS = [/\.pull-refresh/, /\.tour-spotlight/, /\.tour-caption/, /(^|[\s,>])\.coach\b|\.coach-|#coach/, /\.easter-caption/];
+/* ...and selectors whose transition is character or a lesson: the radar emblem's fade and ring and the idle wink (U3
+   S2, Oct 3 — named aside, not sped up), the pull-to-refresh cast, the tour's glide, Sprocket's rig */
+const CHARACTER_SELECTORS = [/^\.theme-mark$/, /^\.outer-ring$/, /^\.idle-wink$/, /\.pull-refresh/, /\.tour-spotlight/, /\.tour-caption/, /(^|[\s,>])\.coach\b|\.coach-|#coach/, /\.easter-caption/];
 const CONTROLS = '.analyze-btn, .save-btn, .clear-btn, .tab-item, .qa-analyze, .add-squad-btn, .tier-cta, .coach-chip, .profile-row';
 const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=button], .profile-row';
 
@@ -77,6 +81,7 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
     const KF = new Set(kf), SEL = sels.map((s) => new RegExp(s));
     const ms = (v) => v.split(',').map((x) => x.trim()).filter(Boolean).map((x) => x.endsWith('ms') ? parseFloat(x) : parseFloat(x) * 1000);
     const out = [];
+    window.__bnCharPrints = [];
     const sheet = [...document.styleSheets].find((s) => (s.href || '').includes('styles.css'));
     const walk = (rules, inReduce) => {
       for (const r of rules) {
@@ -85,6 +90,13 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
         const st = r.style, text = st.cssText;
         const hasT = /transition/.test(text), hasA = /animation/.test(text) && !/animation:\s*none|animation-name:\s*none/.test(text);
         if (!hasT && !hasA) continue;
+        /* THE CHARACTER FINGERPRINT (Obito, Oct 3: S2's rewrite sped the "swipe me" deckNudge from 1.6s to 190 ms,
+           infinite — a 5-a-second jitter — and this witness was blind to it, because a character keyframe is skipped
+           by name). Every use of a character keyframe is recorded as written, and must match CHARACTER_PRINT. */
+        for (const m of text.matchAll(/animation(?:-name)?\s*:\s*([^;]+);/g)) for (const item of m[1].split(/,(?![^(]*\))/)) {
+          const nm = (item.match(/[A-Za-z][\w-]*/g) || []).find((w) => KF.has(w));
+          if (nm) (window.__bnCharPrints = window.__bnCharPrints || []).push(item.trim().replace(/\s+/g, ' '));
+        }
         if (SEL.some((re) => re.test(r.selectorText))) continue;
         const names = (st.animationName || '').split(',').map((s) => s.trim()).filter((s) => s && s !== 'none');
         if (hasA && !hasT && names.length && names.every((n) => KF.has(n))) continue;
@@ -94,6 +106,7 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
         if (decls.some((d) => /var\(/.test(d[3]))) {
           const bad = [];
           for (const d of decls) for (const item of d[3].split(/,(?![^(]*\))/)) {
+            if (d[1] === 'animation' && (item.match(/[A-Za-z][\w-]*/g) || []).some((w) => KF.has(w))) continue;   // a character keyframe: the fingerprint owns it
             const toks = [...item.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
             if (toks.length) {
               const wantBoth = !d[2];   // a shorthand item needs both; a longhand needs its own one
@@ -127,6 +140,18 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
   {
     const { page } = await open(null);
     const before = await ruleCensus(page);
+    const prints = await page.evaluate(() => [...new Set(window.__bnCharPrints)].sort());
+    if (!CHARACTER_PRINT) { console.log('   (unrecorded: the character fingerprint reads —\n     ' + JSON.stringify(prints) + ')'); fail++; }
+    else {
+      const added = prints.filter((p) => !CHARACTER_PRINT.includes(p)), lost = CHARACTER_PRINT.filter((p) => !prints.includes(p));
+      t(`THE CHARACTER FINGERPRINT — ${prints.length} uses of the app's personality keyframes, each as written (a sped-up or slowed character is red)`,
+        !added.length && !lost.length, `changed: ${added.join(' | ') || '-'} · was: ${lost.join(' | ') || '-'}`);
+      await page.evaluate(() => { const s = [...document.styleSheets].find((x) => (x.href || '').includes('styles.css')); s.insertRule('.deck-chevron.planted{animation:deckNudge 190ms ease infinite}', s.cssRules.length); });
+      await ruleCensus(page);
+      const p2 = await page.evaluate(() => [...new Set(window.__bnCharPrints)].sort());
+      t('CONTROL 1c — Obito\'s case: a character keyframe planted at 190 ms changes the fingerprint', p2.some((p) => !CHARACTER_PRINT.includes(p) && p.includes('deckNudge') && /^(190ms|0\.19s) /.test(p)), JSON.stringify(p2.filter((p) => !CHARACTER_PRINT.includes(p))));
+      await page.evaluate(() => { const s = [...document.styleSheets].find((x) => (x.href || '').includes('styles.css')); s.deleteRule(s.cssRules.length - 1); });
+    }
     await page.evaluate(() => { const s = [...document.styleSheets].find((x) => (x.href || '').includes('styles.css')); s.insertRule('#search{transition:opacity .5s ease}', s.cssRules.length); });
     const after = await ruleCensus(page);
     t('CONTROL 1 — a planted rule (#search, .5s ease) is counted, exactly one more', after.length === before.length + 1 && after.some((x) => x.startsWith('#search')), after.length + ' vs ' + before.length);
@@ -138,7 +163,7 @@ const CLICKABLE = 'button, select, input:not([type=hidden]), a[href], [role=butt
     t('CONTROL 1b — Semiu\'s plants: "var(--beat) linear" and "var(--slow) var(--ease)" are each counted', tok.length === after.length + 2 && tok.some((x) => x.startsWith('#searchInput')) && tok.some((x) => x.startsWith('.search-shell')), tok.length + ' vs ' + after.length);
     await page.context().close();
     ratchet('rules', before.length, 'THE RULES — style rules with motion over 190 ms or off the house easing (character and lessons named aside)');
-    if (before.length) console.log('     ' + before.slice(0, 40).join('\n     '));
+    if (before.length) console.log('     ' + before.join('\n     '));
   }
 
   /* ── 2 · WHAT REACHES THE CONTROLS, and 4 · THE DOCK, in every witnessed state ── */
