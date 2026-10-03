@@ -34,4 +34,18 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run all suites
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test.log
+
+      # GitHub shows a run's log only to signed-in visitors; its annotations are public. On a red run this copies the
+      # failed checks and the last lines into annotations, so the house can read WHY without signing in. (Oct 3 2026:
+      # U1's first run failed and nobody here could see which check.)
+      - name: Say what failed, where anyone can read it
+        if: failure()
+        shell: bash
+        run: |
+          esc() { printf '%s' "${1:0:900}" | tr -d '\r' | sed 's/%/%25/g'; }
+          grep -E '❌|FAIL|Error' test.log | head -8 | while IFS= read -r l; do echo "::error title=failed check::$(esc "$l")"; done
+          echo "::error title=last lines of the run::$(tail -6 test.log | while IFS= read -r l; do printf '%s%%0A' "$(esc "$l")"; done)"
