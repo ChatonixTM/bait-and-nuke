@@ -2930,3 +2930,10 @@ select, input[type=number]{ min-height:var(--tap); }
 .drag-handle{ min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center; padding:0; }
 /* 4 · five 44px swatches keep one row on the narrowest phone (at 320 they wrapped 3 + 2) */
 @media (max-width:340px){ .theme-row{ gap:8px; } .theme-row .tr-label{ flex:0 0 100%; } }   /* the label takes its own line, so five 44px swatches fit the 266px row (Obito: 37+8+5x44+4x8 = 297 did not) */
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   U2 — OUR OWN MARKS (Oct 3 2026). Every drawn mark is the size of the text it sits in and takes its colour, so a
+   mark can replace a glyph without touching the font-size rules that glyph had.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+.bn-mark{ width:1em; height:1em; display:inline-block; vertical-align:-.14em; flex:none; overflow:visible;
+  fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }

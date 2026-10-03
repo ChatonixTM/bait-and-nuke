@@ -4850,6 +4850,15 @@ async function deleteSavedTeam(league, id){
 }
 
 // Team names are user-typed text rendered into HTML — escape, always.
+/* U2 · OUR OWN MARKS (Oct 3 2026; Marth: "use our own logo/emojis"). mark('hook') returns one drawn mark from the
+   sheet at the top of index.html, sized to the text around it and coloured by it. An unknown name throws, so a typo
+   can never ship as an empty box. Only for HTML sinks: an <option>, a title or a toast's textContent cannot hold one.
+   (A function declaration with the lookup inside, so it works from code that runs before this line does.) */
+function mark(name, cls){
+  const s = document.getElementById('bn-' + name);
+  if(!s || s.tagName.toLowerCase() !== 'symbol') throw new Error('no drawn mark "' + name + '"');
+  return '<svg class="bn-mark' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#bn-' + name + '"/></svg>';
+}
 function escName(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function renderSavedTeams(){
