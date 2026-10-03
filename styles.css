@@ -973,7 +973,8 @@
     border:1px solid var(--line);
     border-radius:10px;
     padding:14px 16px;
-    transition:border-color .15s, transform .24s cubic-bezier(.5,-0.3,.7,1), opacity .16s ease, max-height .24s cubic-bezier(.5,-0.3,.7,1), padding .24s ease, margin .24s ease;
+    /* (U3 S1, Oct 3: its transition list was removed — .search-shell .search-box below always outranks it, and the only
+       .search-box on the page sits in .search-shell; the v44 yank is opacity only) */
     transform-origin:right center;
     max-height:60px;
     overflow:hidden;
@@ -2708,8 +2709,7 @@
   }
   .search-box:focus-within{transform:none;}
 
-/* v54: tour liveliness */
-.tour-pulse{animation:qaNudge 0.9s ease-in-out 2;}
+/* v54: tour liveliness — the first .tour-pulse rule (qaNudge) was removed Oct 3 (U3 S1): the rule below, same selector, always won */
 
 /* v54: tour act motion */
 @keyframes tourPulse{0%,100%{transform:none;box-shadow:none;}50%{transform:translateY(-4px) scale(1.02);box-shadow:0 10px 26px rgba(0,0,0,.35);}}
