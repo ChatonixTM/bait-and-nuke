@@ -247,6 +247,30 @@ function weightedPick(list){
   return list[0].name;
 }
 
+/* THE BACKGROUND BUBBLES (Oct 3 2026). Marth: "the tiny bubbles should just be apart of the back ground", then
+   "Fewer", then "Yes exactly". A sparse, still scatter of tiny rings behind everything, in the two colours that sit
+   opposite the theme's own colour on the wheel (hue +150 and +210): magenta and orange on the dark teal theme, the
+   pair his eye caught in the rain. Seeded, so it is the same scatter on every load; redrawn on every theme change;
+   painted by body::before (styles.css), so it holds no node, takes no tap, and can never cover a control. */
+function bubbleColours(vars){
+  const n = parseInt(String(vars.signal).slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const hue = !d ? 0 : 60 * (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4);
+  const m = parseInt(String(vars.bg).slice(1), 16);
+  const light = (((m >> 16) & 255) + ((m >> 8) & 255) + (m & 255)) / 765 > 0.5;
+  return [150, 210].map(off => 'hsl(' + Math.round((hue + off) % 360) + ' ' + (light ? 65 : 85) + '% ' + (light ? 40 : 62) + '%)');
+}
+function paintBubbles(vars){
+  const cols = bubbleColours(vars);
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  let rings = '';
+  for(let i = 0; i < 24; i++){
+    const r = (2 + rnd() * 4.5).toFixed(1);
+    rings += '<circle cx="' + (rnd() * 600).toFixed(0) + '" cy="' + (rnd() * 900).toFixed(0) + '" r="' + r + '" fill="none" stroke="' + cols[i % 2] + '" stroke-width="1.3" opacity="' + (0.55 + rnd() * 0.4).toFixed(2) + '"/>';
+  }
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900">' + rings + '</svg>';
+  document.documentElement.style.setProperty('--bubbles', 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")');
+}
 function applyTheme(id){
   currentTheme = id;
   const t = THEMES[id];
@@ -261,6 +285,7 @@ function applyTheme(id){
   root.setProperty('--signal-dim', t.vars.signalDim);
   root.setProperty('--amber', t.vars.amber);
   root.setProperty('--glow-rgb', t.vars.glow);
+  paintBubbles(t.vars);
   // fast-mirror the palette so the next boot can paint it before first pixel
   try{ localStorage.setItem('bn:recon-theme-fast', JSON.stringify({id:id, vars:t.vars})); }catch(e){}
 

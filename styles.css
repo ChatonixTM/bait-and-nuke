@@ -2949,3 +2949,10 @@ select, input[type=number]{ min-height:var(--tap); }
    a 2px outline read faint, and fainter still disabled). */
 .qa-analyze{ min-width:var(--tap); display:inline-flex; align-items:center; justify-content:center; }
 .qa-analyze .bn-mark{ font-size:18px; stroke-width:2.4; }
+
+/* THE BACKGROUND BUBBLES (Oct 3; Marth: "the tiny bubbles should just be apart of the back ground"). app.js
+   paintBubbles() draws them per theme into --bubbles; this lays them under everything. body becomes a stacking
+   context so z-index -1 sits above body's own background and below every one of its children. */
+body{ position:relative; z-index:0; }
+body::before{ content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:var(--bubbles, none); background-size:600px 900px; opacity:.75; }
