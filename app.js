@@ -379,7 +379,7 @@ function typeBadgeHtml(t){
 function moveBuffText(move){
   const b = move && move.buff;
   if(!b || !b.effects || !b.effects.length) return '';
-  const arrow = s => s > 0 ? '⬆'.repeat(Math.min(2,Math.abs(s))) : '⬇'.repeat(Math.min(2,Math.abs(s)));
+  const arrow = s => s > 0 ? '↑'.repeat(Math.min(2,Math.abs(s))) : '↓'.repeat(Math.min(2,Math.abs(s)));
   const parts = b.effects.map(e=>{
     const stat = e.stat === 'atk' ? 'ATK' : 'DEF';
     const who  = e.who === 'self' ? 'your' : 'foe';
@@ -403,7 +403,7 @@ function moveBuffBadge(move){
 function bulkBadgeHtml(bulk, role){
   const isGlass = bulk.label === 'Fragile' && role === 'Nuke';
   const label = isGlass ? 'Glass Cannon' : bulk.label;
-  const icons = {Fragile:'💨', Moderate:'🛡', Bulky:'🛡🛡', Tanky:'🛡🛡🛡'}[bulk.label] || '🛡';
+  const icons = {Fragile:mark('shield-cracked'), Moderate:mark('shield'), Bulky:mark('shield').repeat(2), Tanky:mark('shield').repeat(3)}[bulk.label] || mark('shield');
   const weak = (bulk.weaknesses||[]).slice(0,3);
   const weakNote = weak.length
     ? ` — weak to ${weak.map(w=>`${w.type}${w.mult>=4?' (4x)':''}`).join(', ')}`
@@ -411,13 +411,11 @@ function bulkBadgeHtml(bulk, role){
   return `<span class="type-badge bulk-badge" title="${label}${weakNote}">${icons} ${label}</span>`;
 }
 
-const ROLE_EMOJI = {
-  'Nuke':'💣', 'Bait/Spam':'🎣', 'Boost':'📈', 'Debuff':'📉',
-  'Balanced':'⚖️', 'High Energy':'🔋'
-};
+/* U2: our own marks. Balanced and High Energy carry no mark — the word is the meaning (Itachi's brief). */
+const ROLE_MARK = { 'Nuke':'bomb', 'Bait/Spam':'hook', 'Boost':'arrow-up', 'Debuff':'arrow-down' };
 function roleBadgeHtml(role){
-  const emoji = ROLE_EMOJI[role] || '';
-  return `<span class="type-badge">${emoji} ${role}</span>`;
+  const m = ROLE_MARK[role];
+  return `<span class="type-badge">${m ? mark(m) + ' ' : ''}${role}</span>`;
 }
 
 // One-glance 1-2 word verdict combining role + bulk into a single archetype tag.
@@ -767,7 +765,7 @@ function rankOnePanel(mon){
   const r = rankOneSpread(mon.baseStats||{}, league);
   if(r.uncapped){
     return `<div class="rank1-panel">
-      <div class="rank1-head">🎯 Best spread for ${league}</div>
+      <div class="rank1-head">${mark('target')} Best spread for ${league}</div>
       <div class="rank1-body">No CP cap here — <b>15/15/15</b> is genuinely best. Max Attack isn't wasted in Master League.</div>
     </div>`;
   }
@@ -779,7 +777,7 @@ function rankOnePanel(mon){
   else if(r.hundoGap >= 0.008) verdict = `Low Attack gives a small edge (~${pct}% more bulk than a 15/15/15).`;
   else                         verdict = `IVs barely matter for this one — any spread is within ${pct}% of ideal.`;
   return `<div class="rank1-panel">
-    <div class="rank1-head">🎯 Best ${league} spread (max bulk under ${r.cap})</div>
+    <div class="rank1-head">${mark('target')} Best ${league} spread (max bulk under ${r.cap})</div>
     <div class="rank1-spread"><b>${b.a}/${b.d}/${b.h}</b> at level <b>${b.lvl}</b> → CP <b>${b.cp}</b></div>
     <div class="rank1-body">${verdict}</div>
     <div class="rank1-cost">Maxing any standard Pokémon to L50 costs <b>${MAX_XL_CANDY} XL candy</b> (+ stardust). Same for legendaries, capped-league picks, everything.</div>
@@ -788,7 +786,7 @@ function rankOnePanel(mon){
 
 function ivStrategyTip(){
   const league = LEAGUE_SELECT ? LEAGUE_SELECT.value : 'Great League';
-  const cpHint = ` Don't know your exact IVs? Tap <b>🔢 I only know my CP</b> above and enter your Pokémon's CP + level instead — it'll estimate the spread for you.`;
+  const cpHint = ` Don't know your exact IVs? Tap <b>I only know my CP</b> above and enter your Pokémon's CP + level instead — it'll estimate the spread for you.`;
   if(league === 'Master League'){
     return `<b style="color:var(--signal)">Master League has no CP cap</b> — here, max IVs (15/15/15) is actually correct. The low-Attack trick below only applies to capped leagues.${cpHint}`;
   }
@@ -1471,11 +1469,11 @@ const NM_LOADOUTS = new Map();
 const NM_MULT = m => m >= 2.4 ? '4×' : m >= 1.7 ? '2×' : m >= 0.9 ? '1×' : m >= 0.45 ? '½×' : '¼×';
 
 const NM_TIERS = {
-  1: { name:'Hard Counters', icon:'💀', cls:'t1',
+  1: { name:'Hard Counters', icon:'skull', cls:'t1',
        blurb:'Type advantage <b>plus</b> real shield pressure — cheap bait, fast energy. They force your shields early, then close.' },
-  2: { name:'Grinders', icon:'🪨', cls:'t2',
+  2: { name:'Grinders', icon:'rock', cls:'t2',
        blurb:'They outlast you and convert it. No type advantage needed — slow, and inevitable.' },
-  3: { name:'Coincidental', icon:'🎲', cls:'t3',
+  3: { name:'Coincidental', icon:'dice', cls:'t3',
        blurb:'Super-effective on paper, but no engine behind it. Beatable if you shield correctly.' }
 };
 
@@ -1500,7 +1498,7 @@ function nightmareBoardHTML(nightmares, monName, hintText){
     const meta = NM_TIERS[t];
     html += `
       <div class="nm-tier ${meta.cls}">
-        <div class="nm-tier-head"><span class="nm-tier-badge ${meta.cls}">${meta.icon} Tier ${t}</span> <b>${meta.name}</b></div>
+        <div class="nm-tier-head"><span class="nm-tier-badge ${meta.cls}">${mark(meta.icon)} Tier ${t}</span> <b>${meta.name}</b></div>
         <div class="nm-tier-blurb">${meta.blurb}</div>
         <div class="nightmare-row">
           ${group.map(n=>`
@@ -1512,9 +1510,9 @@ function nightmareBoardHTML(nightmares, monName, hintText){
                 · your reply <b>${NM_MULT(n.myBest)}</b>
               </div>
               <div class="nm-stats">
-                <span title="Shield pressure — how fast they force a shield (turn-aware)">⚡ ${n.pressure.idx.toFixed(2)}</span>
-                <span title="Damage per energy of their nuke">💥 ${n.dpe.toFixed(2)}</span>
-                <span title="Real seconds to their cheapest move — turn-quantized, because energy only lands when a fast move finishes">⏱ ${n.pressure.ttc.toFixed(1)}s</span>
+                <span title="Shield pressure — how fast they force a shield (turn-aware)">${mark('bolt')} ${n.pressure.idx.toFixed(2)}</span>
+                <span title="Damage per energy of their nuke">${mark('blast')} ${n.dpe.toFixed(2)}</span>
+                <span title="Real seconds to their cheapest move — turn-quantized, because energy only lands when a fast move finishes">${mark('clock')} ${n.pressure.ttc.toFixed(1)}s</span>
               </div>
               <div class="nm-kit">${n.theirFast.name} <span class="nm-turns" title="Fast-move length — a 1-turn move is a scalpel, a 4-turn move is a commitment">(${n.pressure.turns}T)</span>${n.theirBait?` › ${n.theirBait.name}`:''} › ${n.theirNuke.name}${
                 /* ⚠ THE 4TH MOVE BELONGS HERE TOO. Rendered at 390px, a mega
@@ -1551,7 +1549,7 @@ function nightmareBoardHTML(nightmares, monName, hintText){
   if(unrated.length){
     html += `
       <div class="nm-unrated">
-        <div class="nm-unrated-head">⭕ Megas in Master — <b>no rating exists</b></div>
+        <div class="nm-unrated-head">${mark('ring')} Megas in Master — <b>no rating exists</b></div>
         <div class="nm-unrated-blurb">
           Mega Edition week runs in Master League too, but Master has no CP cap and
           nobody publishes mega rankings for it — so this app will not invent a score
@@ -1748,7 +1746,7 @@ function renderTabContentHTML(mon, tabId, depth){
           : POKEMON.filter(p => p.speciesId.startsWith(mon.speciesId + '_mega') || p.speciesId === mon.speciesId + '_primal');
         if(!kin.length) return '';
         const chips = kin.map(p => {
-          const label = isMega ? ('↩ ' + p.speciesName) : ('⚡ ' + (p.speciesName.match(/\(([^)]+)\)/) ? p.speciesName.match(/\(([^)]+)\)/)[1] : 'Mega'));
+          const label = isMega ? ('↩ ' + p.speciesName) : (mark('bolt') + ' ' + (p.speciesName.match(/\(([^)]+)\)/) ? p.speciesName.match(/\(([^)]+)\)/)[1] : 'Mega'));
           return `<button class="mega-chip" data-sid="${p.speciesId}">${label}</button>`;
         }).join('');
         return `<div class="mega-row">${chips}</div>`;
@@ -1851,7 +1849,7 @@ function renderMinimizedPill(){
   const last = window.__bnMinimizedTabs[n-1];
   const lastMon = last && POKEMON.find(p=>p.speciesId===last.speciesId);
   const who = lastMon ? lastMon.speciesName : 'tab';
-  pill.textContent = n === 1 ? `🎣 ${who}` : `🎣 ${who} +${n-1}`;
+  pill.innerHTML = mark('hook') + ' ' + escName(n === 1 ? who : `${who} +${n-1}`);   /* U2: a drawn hook, so HTML, so the name is escaped */
   pill.title = window.__bnMinimizedTabs.map(t=>{const m=POKEMON.find(p=>p.speciesId===t.speciesId);return m?m.speciesName:t.speciesId;}).join(', ');
 }
 const __origRenderTabStack = renderTabStack;
@@ -1992,8 +1990,8 @@ function renderResult(mon){
   const monFlags = (typeof MOVE_FLAGS !== 'undefined' && MOVE_FLAGS[mon.speciesId]) || null;
   const moveFlag = mv => {
     if(!monFlags || !mv) return '';
-    if((monFlags.l||[]).includes(mv.moveId)) return '  ·  ⛔ legacy';
-    if((monFlags.e||[]).includes(mv.moveId)) return '  ·  🎫 Elite TM';
+    if((monFlags.l||[]).includes(mv.moveId)) return '  ·  legacy';
+    if((monFlags.e||[]).includes(mv.moveId)) return '  ·  Elite TM';
     return '';
   };
   const fastOpts = fastList.map(f=>`<option value="${f.moveId}"${f.moveId===def.fast.moveId?' selected':''}>${f.name}${moveFlag(f)}</option>`).join('');
@@ -2052,7 +2050,7 @@ function renderResult(mon){
       <div>
         <div class="mon-name">${mon.speciesName}</div>
         <div class="mon-tags">${typeBadges}</div>
-        ${monCupWarn ? `<div class="cup-warn">⚠ ${monCupWarn}</div>` : ''}
+        ${monCupWarn ? `<div class="cup-warn">${mark('warning')} ${monCupWarn}</div>` : ''}
       </div>
     </div>
 
@@ -2073,9 +2071,9 @@ function renderResult(mon){
     <div id="ivZone">
     <div class="section-label">Your actual IVs <em style="font-style:normal;text-transform:none;letter-spacing:0;">(optional — changes real bulk below)</em></div>
     <div class="iv-preset-row">
-      <button class="iv-preset-btn" id="ivRealisticBtn">🎲 Use realistic IVs (8/11/11)</button>
+      <button class="iv-preset-btn" id="ivRealisticBtn">${mark('dice')} Use realistic IVs (8/11/11)</button>
       <button class="iv-preset-btn ghost" id="ivMaxBtn">Reset to 15/15/15</button>
-      <button class="iv-preset-btn ghost" id="cpModeToggle">🔢 I only know my CP</button>
+      <button class="iv-preset-btn ghost" id="cpModeToggle">I only know my CP</button>
     </div>
     <div class="iv-picker" id="ivPickerRow">
       <label>Attack IV<input type="number" id="ivAtk" min="0" max="15" value="8"></label>
@@ -2111,7 +2109,7 @@ function renderResult(mon){
     <div class="iv-tip tip-dismiss" data-tip="ivTip" id="ivTip"></div>
     <div id="rank1Panel"></div>
     </div>
-    <button id="ivZoneToggle" class="ivzone-toggle">🎯 Show IV tools &amp; best spread</button>
+    <button id="ivZoneToggle" class="ivzone-toggle">${mark('target')} Show IV tools &amp; best spread</button>
     <div id="loadoutStats"></div>
 
     ${nightmareBoardHTML(nightmares, mon.speciesName, 'tap a nightmare to scout it — know thy enemy')}
@@ -2119,7 +2117,7 @@ function renderResult(mon){
     ${researchTables}
 
     <div class="note tip-dismiss" data-tip="pvpNote"><button class="tip-x" aria-label="Dismiss tip">×</button>
-      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>🎯 Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> moves marked <b>🎫 Elite TM</b> can only be taught with an Elite TM, and <b>⛔ legacy</b> moves are no longer obtainable at all. Everything unmarked is available normally. Flags come from PvPoke's move data — still worth a glance in-game before spending candy. Full current roster (${POKEMON.length} Pokémon, ${Object.keys(MOVES).length} moves), synced from PvPoke's data.
+      <b>Real PvP builds usually run two charged moves</b> — a cheap "bait" to force a shield, and a bigger "nuke" to close it out. Pick both here; the squad builder uses this exact combo. Your IVs above shift the bulk rating to reflect <i>your</i> actual Pokémon instead of a generic one — lower Attack IV can mean a <i>tankier</i> Pokémon in practice, since it lets you level up further before hitting a league's CP cap. The <b>${mark('target')} Best spread</b> panel above shows the exact rank-1 spread and level for the current league. <b>Heads up:</b> moves marked <b>Elite TM</b> can only be taught with an Elite TM, and <b>legacy</b> moves are no longer obtainable at all. Everything unmarked is available normally. Flags come from PvPoke's move data — still worth a glance in-game before spending candy. Full current roster (${POKEMON.length} Pokémon, ${Object.keys(MOVES).length} moves), synced from PvPoke's data.
     </div>
   `;
   RESULT.classList.add('show');
@@ -2172,7 +2170,7 @@ function renderResult(mon){
 
     if(!cp){ note.innerHTML = range; return; }
     if(cp < minCP || cp > maxCP){
-      note.innerHTML = `⚠ CP ${cp} is impossible for ${mon.speciesName} at any level or IV spread.` + range;
+      note.innerHTML = `${mark('warning')} CP ${cp} is impossible for ${mon.speciesName} at any level or IV spread.` + range;
       return;
     }
     if(!hp){
@@ -2190,7 +2188,7 @@ function renderResult(mon){
     const sols = solveIVs(mon.baseStats||{}, cp, hp, opt);
 
     if(!sols.length){
-      note.innerHTML = `⚠ Nothing matches CP ${cp} with ${hp} HP for ${mon.speciesName}.
+      note.innerHTML = `${mark('warning')} Nothing matches CP ${cp} with ${hp} HP for ${mon.speciesName}.
         Double-check both numbers${opt.stars!==undefined||opt.maxAtk||opt.maxDef||opt.maxHp ? ', or loosen the appraisal filters' : ''}.` + range;
       return;
     }
@@ -2206,7 +2204,7 @@ function renderResult(mon){
     // ONE answer = we genuinely know. Say so, and only then.
     if(sols.length === 1){
       const s = sols[0];
-      note.innerHTML = `✅ <b>Pinned exactly: ${s.atk}/${s.def}/${s.hp}</b> at <b>level ${s.level}</b>
+      note.innerHTML = `✓ <b>Pinned exactly: ${s.atk}/${s.def}/${s.hp}</b> at <b>level ${s.level}</b>
         <span class="cp-sub">(${Math.round(s.total/45*100)}% — only one level + IV spread in the game produces CP ${cp} with ${hp} HP)</span>` + range;
       return;
     }
@@ -2253,7 +2251,7 @@ function renderResult(mon){
     ivRow.style.display = usingCP ? 'none' : '';
     cpRow.style.display = usingCP ? '' : 'none';
     apRow.style.display = usingCP ? '' : 'none';
-    this.textContent = usingCP ? '🧬 Enter exact IVs instead' : '🔢 I only know my CP';
+    this.textContent = usingCP ? 'Enter exact IVs instead' : 'I only know my CP';
     document.getElementById('cpSolveNote').innerHTML = '';
   });
 
@@ -2273,7 +2271,7 @@ function renderLoadoutStats(l){
     ? `<div class="loadout-line"><b>${l.castsBait}</b> taps of <span class="fm">${l.fast.name}</span> charges <span class="cm">${l.bait.name}</span> (bait) — <b class="amber">${l.dpsBait.toFixed(2)}</b> dmg/sec${baitBuff}</div>`
     : `<div class="loadout-line dim">No bait move selected — running nuke only.</div>`;
   const synergy = renderSynergyLine(l);
-  const autoNote = `<div class="loadout-auto">⚡ Auto-selected for best PvP value — STAB, energy efficiency, coverage, and guaranteed stat effects all weighed. Change any move above to override.</div>`;
+  const autoNote = `<div class="loadout-auto">${mark('bolt')} Auto-selected for best PvP value — STAB, energy efficiency, coverage, and guaranteed stat effects all weighed. Change any move above to override.</div>`;
   return `<div class="loadout-stats">${baitLine}${nukeLine}${synergy}${autoNote}</div>`;
 }
 
@@ -2301,11 +2299,11 @@ function renderSynergyLine(l){
   else                verdict = `<b class="syn-slow">slow to charge</b> — leans on its fast move for damage`;
 
   const eliteNote = eliteBait
-    ? ` <span class="syn-elite">⭐ elite bait: even a shielded ${l.bait.name} still ${buffPhrase(l.bait.buff)}</span>`
+    ? ` <span class="syn-elite">${mark('star')} elite bait: even a shielded ${l.bait.name} still ${buffPhrase(l.bait.buff)}</span>`
     : '';
 
   return `<div class="loadout-line syn">
-    <span class="syn-icon">🔋</span>
+    <span class="syn-icon">${mark('bolt')}</span>
     ${f.name} feeds <b>${ept.toFixed(1)}</b> energy/turn (${verdict}).
     First charge in <b>${tapsToFire}</b> taps (~${secsToFire.toFixed(1)}s).${eliteNote}
   </div>`;
@@ -2338,7 +2336,7 @@ function renderQuickAddBar(mon){
   const currentLeague = mainLeague ? mainLeague.value : 'Great League';
   bar.innerHTML = `
     <button class="add-squad-btn${inSquad?' in-squad':''}" id="addSquadBtn">${btnLabel}</button>
-    <button class="qa-analyze${becameFull?' qa-nudge':''}" id="qaAnalyzeBtn" title="Analyze squad synergy" aria-label="Analyze squad synergy" ${squad.length < 2 ? 'disabled' : ''}>⚡</button>
+    <button class="qa-analyze${becameFull?' qa-nudge':''}" id="qaAnalyzeBtn" title="Analyze squad synergy" aria-label="Analyze squad synergy" ${squad.length < 2 ? 'disabled' : ''}>${mark('bolt')}</button>
     ${squad.length ? `<span class="qa-chip-rail" role="group" aria-label="View a squad member">${squad.map(s =>
       `<button class="qa-mon-chip${s.speciesId === mon.speciesId ? ' current' : ''}" data-sid="${s.speciesId}" title="View ${s.speciesName}">${s.speciesName}</button>`
     ).join('')}</span>` : ''}

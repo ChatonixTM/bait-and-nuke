@@ -2943,3 +2943,9 @@ select, input[type=number]{ min-height:var(--tap); }
 .brand-wordmark .bw-emoji:first-child .bn-mark{ color:var(--signal); stroke-width:2.4; }
 .brand-wordmark .bw-emoji:last-child .bn-mark{ color:var(--amber); stroke-width:2.4; }
 .pull-refresh .pr-hook .bn-mark{ color:var(--signal); stroke-width:2.2; }
+/* U1 defect, found by GitHub's first readable red (Oct 3): the Command Deck's Analyze key had no width floor; its
+   width came from the ⚡ glyph, wide enough in the Windows emoji font and 39px in Linux's, so it failed only on
+   other machines. Now a thumb's width on every font. Its bolt is heavier, like the wordmark's marks (Obito: at 14px
+   a 2px outline read faint, and fainter still disabled). */
+.qa-analyze{ min-width:var(--tap); display:inline-flex; align-items:center; justify-content:center; }
+.qa-analyze .bn-mark{ font-size:18px; stroke-width:2.4; }

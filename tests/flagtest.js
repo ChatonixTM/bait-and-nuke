@@ -46,7 +46,9 @@ t('no flag references a move the mon cannot learn', orphan===0, orphan+' orphans
 t('fast dropdown shows flags', /fastOpts[\s\S]{0,200}moveFlag\(f\)/.test(app));
 t('nuke dropdown shows flags', /nukeOpts[\s\S]{0,200}moveFlag\(c\)/.test(app));
 t('bait dropdown shows flags', /baitOpts[\s\S]{0,300}moveFlag\(c\)/.test(app));
-t('markers are 🎫 Elite TM and ⛔ legacy', app.includes('🎫 Elite TM') && app.includes('⛔ legacy'));
+/* U2 S3 (Oct 3, Marth: "use our own logo/emojis"): an <option> cannot hold a drawn mark, so the markers are the
+   words themselves, set off by the dot. Still asserted, so a flag cannot silently lose its label. */
+t('markers are "· Elite TM" and "· legacy" (the words, set off by the dot)', app.includes("'  ·  Elite TM'") && app.includes("'  ·  legacy'"));
 
 // 5. The old vague disclaimer must be gone
 t('vague "doesn\'t yet flag which ones" text removed', !app.includes("doesn't yet flag which ones"));

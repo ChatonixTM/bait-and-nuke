@@ -14,7 +14,13 @@ const { extract } = require(require('path').join(__dirname,'extract.js'));
 const LEAGUE_EL = { get value(){ return global.__LEAGUE || 'Great League'; },
                     set value(v){ global.__LEAGUE = v; },
                     dispatchEvent(){ return true; } };
-global.document = { getElementById: (id) => id === 'leagueSelect' ? LEAGUE_EL : null };
+/* U2 (Oct 3): app.js draws our own marks through mark(name), which refuses a name that is not in the sheet at the
+   top of index.html. The sheet is read from the SHIPPED index.html, so a bench reaching a board sees the real marks
+   and a misspelled one still throws here as it does in the browser — never a stub that accepts any name. */
+const MARK_IDS = new Set([...fs.readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8')
+  .matchAll(/<symbol id="(bn-[a-z-]+)"/g)].map((m) => m[1]));
+global.document = { getElementById: (id) => id === 'leagueSelect' ? LEAGUE_EL
+  : MARK_IDS.has(id) ? { id, tagName: 'symbol' } : null };
 global.cupFilterActive = false; global.selectedCupIndex = 0; global.CUPS = [];
 /* ═══════════════════════════════════════════════════════════════════════════
    NOTHING IS REMEMBERED HERE ANY MORE — board rule 135, executed.
