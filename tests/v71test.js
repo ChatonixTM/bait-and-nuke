@@ -13,6 +13,14 @@ http.createServer((q,r)=>{ const f=pth.join(DIST, q.url==='/'?'/index.html':q.ur
   const errs=[]; p.on('pageerror', e=>errs.push(e.message));
   await p.goto('http://127.0.0.1:8120/index.html');
   await p.waitForFunction(()=>typeof POKEMON!=="undefined"&&POKEMON.length>1000,{timeout:15000});
+  /* SETTLE THE FONTS BEFORE MEASURING A SCROLL (Oct 3 2026). The two web fonts load after the app is ready (the
+     stylesheet swaps media print→all on load), and the swap grows the page (2039 → 2139px at 390 wide). A swap that
+     lands while a panel holds the lock re-anchors the scroll: measured 293 here, and 315 on GitHub's Linux runner —
+     red there, green here, the same page. With the fonts settled it lands on 300 exactly, and with them blocked
+     entirely, also 300. So the bench waits for the font stylesheet to apply and for document.fonts.ready — or 5 s,
+     after which a page with no web fonts is a settled page too. The ±12 below is unchanged. */
+  await p.waitForFunction(()=>[...document.querySelectorAll('link[href*="fonts.googleapis.com/css2"]')].every(l=>l.media==='all'),{timeout:5000}).catch(()=>{});
+  await p.evaluate(()=>document.fonts.ready);
   let pass=0, fail=0;
   const t=(l,c,x='')=>{ if(c){pass++;console.log('  ✅ '+l);} else {fail++;console.log('  ❌ '+l+(x?' — '+x:''));} };
   const locked = ()=>p.evaluate(()=>document.body.classList.contains('tabs-open'));
