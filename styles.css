@@ -2727,7 +2727,9 @@
   z-index:61;                      /* just above the bar (60); under every sheet, which covers the bar and him with it */
   width:50px;height:62px;
   background:none;border:none;padding:0;cursor:pointer;
-  filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));
+  /* Track B item 2 (Oct 5): his body is drawn in --panel and --line, the bar's own two colours, so on the dark bar
+     only his eyes showed. A 1px rim in the theme's ink (--text, AAA against --panel on every theme) outlines him. */
+  filter:drop-shadow(0 0 1px var(--text)) drop-shadow(0 0 1px var(--text)) drop-shadow(0 4px 10px rgba(0,0,0,.45));
   transition:transform var(--beat) var(--ease), opacity var(--beat) var(--ease);   /* U3: the dock shows and hides on the beat */
 }
 #coachDock:active{transform:translateY(1px) scale(var(--press))}   /* U3: the house press */
@@ -2735,20 +2737,22 @@
 
 #coachPanel{
   position:fixed;
-  right:10px;
+  left:50%;   /* Track B item 1 (Oct 5): opens from where he sits — his seat is the middle of the bar, so the panel
+                 rises from the bottom centre (it rose from the right corner, 270px off him in landscape) */
   bottom:calc(62px + env(safe-area-inset-bottom, 0px)); /* v68: clears the tab bar */
   z-index:341;
   width:min(360px, calc(100vw - 20px));
   max-height:min(480px, 72vh);
   display:flex;flex-direction:column;
+  overflow:hidden;   /* Oct 5 (Gohan's finding): in landscape the input row spilled out below the card over the bar */
   background:var(--panel,#121820);
   border:1px solid var(--line,#1f2a35);
   border-radius:18px;
   box-shadow:0 12px 40px rgba(0,0,0,.5);
-  opacity:0;pointer-events:none;transform:translateY(12px);
+  opacity:0;pointer-events:none;transform:translate(-50%, 12px);
   transition:opacity .2s ease, transform .2s ease;
 }
-#coachPanel.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+#coachPanel.open{opacity:1;pointer-events:auto;transform:translate(-50%, 0)}
 
 .coach-head{display:flex;align-items:center;gap:10px;padding:10px 12px;
   border-bottom:1px solid var(--line,#1f2a35)}
@@ -2760,7 +2764,8 @@
   font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
 
 .coach-log{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;
-  gap:8px;-webkit-overflow-scrolling:touch;min-height:120px}
+  gap:8px;-webkit-overflow-scrolling:touch;min-height:min(120px, 18vh)}   /* the log gives way on a short screen, never the input */
+.coach-head,.coach-chips,.coach-inputrow{flex-shrink:0}
 .coach-msg{max-width:86%;padding:8px 11px;border-radius:13px;font-size:13px;
   line-height:1.45;overflow-wrap:break-word}
 .coach-msg.from-you{align-self:flex-end;background:var(--signal,#4de8c9);
@@ -2776,6 +2781,7 @@
 .conf-cant{color:#8b97a7;background:rgba(139,151,167,.14)}
 
 .coach-chips{display:flex;gap:8px;padding:0 12px 8px;flex-wrap:wrap}
+@media (max-height:500px){.coach-chips{flex-wrap:nowrap;overflow-x:auto}}   /* a phone on its side: the chips run in one row you swipe, so the input stays on the card (after the base rule, or it loses) */
 .coach-chip{font-size:11.5px;padding:6px 10px;border-radius:20px;cursor:pointer;
   background:var(--bg,#0f151c);border:1px solid var(--line,#1f2a35);
   color:var(--text-dim,#94a4b2)}

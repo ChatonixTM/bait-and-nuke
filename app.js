@@ -258,7 +258,11 @@ function bubbleColours(vars){
   const hue = !d ? 0 : 60 * (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4);
   const m = parseInt(String(vars.bg).slice(1), 16);
   const light = (((m >> 16) & 255) + ((m >> 8) & 255) + (m & 255)) / 765 > 0.5;
-  return [150, 210].map(off => 'hsl(' + Math.round((hue + off) % 360) + ' ' + (light ? 65 : 85) + '% ' + (light ? 40 : 62) + '%)');
+  /* Track B item 3 (Oct 5): never the danger hue. On grey the theme hue is 203, so +150 landed on 353 — red, and a
+     red ring beside a warning read as an alarm. A bubble within 15° of red (--danger, hue 0) slides 30° on round
+     the wheel, away from it: 353 -> 323 (magenta). Dark's orange at 18 is outside the band and untouched. */
+  const clear = h => h >= 345 ? h - 30 : h < 15 ? h + 30 : h;
+  return [150, 210].map(off => 'hsl(' + Math.round(clear((hue + off) % 360)) + ' ' + (light ? 65 : 85) + '% ' + (light ? 40 : 62) + '%)');
 }
 function paintBubbles(vars){
   const cols = bubbleColours(vars);
